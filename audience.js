@@ -8,7 +8,8 @@ var NAMESPACE_MAX_LEN = 50,
 
 var online = new function()
 {
-    var namespaces = {};
+    var namespaces = {},
+        $this = this;
 
     this.namespace = function(namespace_name, no_auto_create)
     {
@@ -56,7 +57,6 @@ var online = new function()
 
         namespace.members++;
         client.namespace = namespace;
-        this.notify(namespace);
     }
 
     this.leave = function(client)
@@ -65,10 +65,7 @@ var online = new function()
         {
             var namespace = client.namespace;
             namespace.members--;
-            if (!this.clean_namespace(namespace))
-            {
-                this.notify(namespace);
-            }
+            this.clean_namespace(namespace);
             delete client.namespace;
         }
     }
@@ -85,19 +82,18 @@ var online = new function()
             client.listened.push(namespace);
             info[namespace.name] = namespace.members;
         }
-        client.send(JSON.stringify(info));
+        client.send(info);
     }
 
     this.unlisten = function(client)
     {
         if (client.listened)
         {
-            for (var i in client.listened)
+            client.listened.forEach(function(namespace)
             {
-                var namespace = client.listened[i];
                 namespace.listeners.splice(namespace.listeners.indexOf(client), 1);
-                this.clean_namespace(namespace);
-            }
+                $this.clean_namespace(namespace);
+            });
             delete client.listened;
         }
     }
@@ -108,28 +104,33 @@ var online = new function()
         this.unlisten(client);
     }
 
-    this.notify = function(namespace)
+    this.notify = function()
     {
-        if (namespace.notifier || namespace.listeners.length == 0) return;
-
-        var delay = NOTIFY_MIN_INTERVAL - Math.min(new Date() - namespace.lastNotified,  NOTIFY_MIN_INTERVAL);
-
-        namespace.notifier = setTimeout(function()
+        var listeners = [];
+        for (var namespace_name in namespaces)
         {
-            if (namespace.members !== namespace.lastNotifyValue)
+            var namespace = namespaces[namespace_name];
+            if (namespace.listeners.length === 0 || namespace.lastNotifiedValue === namespace.members)
             {
-                var info = {};
-                info[namespace.name] = namespace.members;
-                info = JSON.stringify(info);
-                for (var i in namespace.listeners)
-                {
-                    namespace.listeners[i].send(info);
-                }
-                namespace.lastNotifyValue = namespace.members;
-                namespace.lastNotified = new Date();
+                continue;
             }
-            delete namespace.notifier;
-        }, delay);
+            namespace.listeners.forEach(function(listener)
+            {
+                if (!listener.bufferNotif) listener.bufferNotif = {};
+                listener.bufferNotif[namespace.name] = namespace.members;
+            });
+            namespace.lastNotifiedValue = namespace.members;
+            listeners = listeners.concat(namespace.listeners);
+        }
+
+        listeners.forEach(function(listener)
+        {
+            if (listener.bufferNotif)
+            {
+                listener.send(listener.bufferNotif);
+                delete listener.bufferNotif;
+            }
+        });
     }
 
     this.info = function(namespace_name)
@@ -149,6 +150,8 @@ var online = new function()
         return stats;
     }
 }
+
+setInterval(online.notify, NOTIFY_MIN_INTERVAL);
 
 var server = http.createServer(function(req, res)
 {
@@ -180,7 +183,7 @@ var server = http.createServer(function(req, res)
         res.write('var socket = new io.Socket(location.host);\n');
         res.write('socket.connect();\n');
         res.write('socket.on("connect", function() {socket.send(JSON.stringify({join: location.pathname, listen: [location.pathname]}));});\n');
-        res.write('socket.on("message", function(count) {document.getElementById("total").innerHTML = count;});\n');
+        res.write('socket.on("message", function(data) {document.getElementById("total").innerHTML = data[location.pathname];});\n');
         res.write('</script>\n');
         res.end();
     }
@@ -237,7 +240,7 @@ socket.on('connection', function(client)
         }
         catch (err)
         {
-            client.send(JSON.stringify({err: err}));
+            client.send({err: err});
             return;
         }
 
