@@ -14,16 +14,10 @@ var online = new function()
 
     this.namespace = function(namespace_name, no_auto_create)
     {
-        if (namespace_name[0] !== '/')
-        {
-            // Prefix the namespace to prevent from overwrite of internal Object structure
-            namespace_name = '/' + namespace_name;
-        }
-
-        var namespace = namespaces[namespace_name];
+        var namespace = namespaces['@' + namespace_name];
         if (!namespace && !no_auto_create)
         {
-            namespace = namespaces[namespace_name] = {};
+            namespace = namespaces['@' + namespace_name] = {};
             namespace.members = 0;
             namespace.listeners = [];
             namespace.lastNotified = 0;
@@ -36,7 +30,7 @@ var online = new function()
     {
         if (namespace.members == 0 && namespace.listeners.length == 0)
         {
-            delete namespaces[namespace.name];
+            delete namespaces['@' + namespace.name];
             return true;
         }
     }
