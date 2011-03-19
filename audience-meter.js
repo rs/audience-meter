@@ -3,9 +3,9 @@ var http = require('http'),
     fs = require('fs'),
     io = require('socket.io');
 
-var NAMESPACE_MAX_LEN = 50,
-    NAMESPACE_MAX_LISTEN = 20,
-    NOTIFY_MIN_INTERVAL = 500;
+var CMD_MAX_NAMESPACE_LEN = 50,
+    CMD_MAX_NAMESPACE_LISTEN = 20,
+    NOTIFY_INTERVAL = 500;
 
 var online = new function()
 {
@@ -14,13 +14,13 @@ var online = new function()
 
     this.namespace = function(namespace_name, no_auto_create)
     {
+        // Prefix namespace in order to prevent from overwriting Object internal properties
         var namespace = namespaces['@' + namespace_name];
         if (!namespace && !no_auto_create)
         {
             namespace = namespaces['@' + namespace_name] = {};
             namespace.members = 0;
             namespace.listeners = [];
-            namespace.lastNotified = 0;
             namespace.name = namespace_name;
         }
         return namespace;
@@ -70,13 +70,13 @@ var online = new function()
         this.unlisten(client);
         client.listened = [];
         var info = {};
-        for (var i in namespace_names)
+        namespace_names.forEach(function(namespace_name)
         {
-            var namespace = this.namespace(namespace_names[i]);
+            var namespace = $this.namespace(namespace_name);
             namespace.listeners.push(client);
             client.listened.push(namespace);
             info[namespace.name] = namespace.members;
-        }
+        });
         client.send(info);
     }
 
@@ -107,6 +107,7 @@ var online = new function()
             var namespace = namespaces[namespace_name];
             if (namespace.listeners.length === 0 || namespace.lastNotifiedValue === namespace.members)
             {
+                // Only notify if there is some listeners a total members changed since the last notice
                 continue;
             }
             namespace.listeners.forEach(function(listener)
@@ -146,7 +147,7 @@ var online = new function()
     }
 }
 
-setInterval(online.notify, NOTIFY_MIN_INTERVAL);
+setInterval(online.notify, NOTIFY_INTERVAL);
 
 var demo;
 fs.readFile('./demo.html', function (err, data)
@@ -207,9 +208,9 @@ socket.on('connection', function(client)
                 {
                     throw 'Invalid join value: must be a string'
                 }
-                if (command.join.length > NAMESPACE_MAX_LEN)
+                if (command.join.length > CMD_MAX_NAMESPACE_LEN)
                 {
-                    throw 'Maximum length for namespace is ' + NAMESPACE_MAX_LEN;
+                    throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
                 }
                 join = command.join;
             }
@@ -219,17 +220,17 @@ socket.on('connection', function(client)
                 {
                     throw 'Invalid listen value: must be an array';
                 }
-                if (command.listen.length > NAMESPACE_MAX_LISTEN)
+                if (command.listen.length > CMD_MAX_NAMESPACE_LISTEN)
                 {
-                    throw 'Maximum listenable namespaces is ' + NAMESPACE_MAX_LISTEN;
+                    throw 'Maximum listenable namespaces is ' + CMD_MAX_NAMESPACE_LISTEN;
                 }
-                for (var i in command.listen)
+                command.listen.forEach(function(namespace)
                 {
-                    if (command.listen[i].length > NAMESPACE_MAX_LEN)
+                    if (namespace.length > CMD_MAX_NAMESPACE_LEN)
                     {
-                        throw 'Maximum length for namespace is ' + NAMESPACE_MAX_LEN;
+                        throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
                     }
-                }
+                });
                 listen = command.listen;
             }
         }
