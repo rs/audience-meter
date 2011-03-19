@@ -1,5 +1,6 @@
 var http = require('http'),
     url = require('url'),
+    fs = require('fs'),
     io = require('socket.io');
 
 var NAMESPACE_MAX_LEN = 50,
@@ -153,6 +154,14 @@ var online = new function()
 
 setInterval(online.notify, NOTIFY_MIN_INTERVAL);
 
+var demo;
+fs.readFile('./demo.html', function (err, data)
+{
+    if (err) throw err; 
+    demo = data.toString();
+});
+
+
 var server = http.createServer(function(req, res)
 {
     var location = url.parse(req.url, true),
@@ -177,15 +186,7 @@ var server = http.createServer(function(req, res)
     else
     {
         res.writeHead(200, {'Content-Type': 'text/html'});
-        res.write('Connected users: <span id="total">-</span>\n');
-        res.write('<script src="/socket.io/socket.io.js"></script>\n');
-        res.write('<script>\n');
-        res.write('var socket = new io.Socket(location.host);\n');
-        res.write('socket.connect();\n');
-        res.write('socket.on("connect", function() {socket.send(JSON.stringify({join: location.pathname, listen: [location.pathname]}));});\n');
-        res.write('socket.on("message", function(data) {document.getElementById("total").innerHTML = data[location.pathname];});\n');
-        res.write('</script>\n');
-        res.end();
+        res.end(demo.replace(/{hostname}/g, req.headers.host).replace(/{pathname}/g, path));
     }
 });
 server.listen(80);

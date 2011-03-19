@@ -1,0 +1,41 @@
+<html>
+<body>
+Connected users to {pathname}: <span id="total">-</span>
+<script src="http://{hostname}/socket.io/socket.io.js"></script>
+<script>
+var socket = new io.Socket("{hostname}");
+socket.connect();
+socket.on("connect", function()
+{
+    socket.send(JSON.stringify
+    ({
+        join: "{pathname}",
+        listen: ["{pathname}"]
+    }));
+});
+socket.on("message", function(data)
+{
+    document.getElementById("total").innerHTML = data["{pathname}"];
+});
+</script>
+<pre>
+&lt;script src="http://{hostname}/socket.io/socket.io.js">&lt;/script>
+&lt;script>
+var socket = new io.Socket("{hostname}");
+socket.connect();
+socket.on("connect", function()
+{
+    socket.send(JSON.stringify
+    ({
+        join: "{pathname}",
+        listen: ["{pathname}"]
+    }));
+});
+socket.on("message", function(data)
+{
+    document.getElementById("total").innerHTML = data["{pathname}"];
+});
+&lt;/script>
+</pre>
+</body>
+</html>
