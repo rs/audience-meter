@@ -9,18 +9,28 @@ var online = new function()
 {
     var namespaces = {};
 
-    this.create = function(namespace_name)
+    this.namespace = function(namespace_name, no_auto_create)
     {
-        namespace = namespaces[namespace_name] = {};
-        namespace.members = [];
-        namespace.listeners = [];
-        namespace.name = namespace_name;
+        if (namespace_name[0] !== '/')
+        {
+            // Prefix the namespace to prevent from overwrite of internal Object structure
+            namespace_name = '/' + namespace_name;
+        }
+
+        var namespace = namespaces[namespace_name];
+        if (!namespace && !no_auto_create)
+        {
+            namespace = namespaces[namespace_name] = {};
+            namespace.members = 0;
+            namespace.listeners = [];
+            namespace.name = namespace_name;
+        }
         return namespace;
     }
 
-    this.clean = function(namespace)
+    this.clean_namespace = function(namespace)
     {
-        if (namespace.members.length == 0 && namespace.listeners.length == 0)
+        if (namespace.members == 0 && namespace.listeners.length == 0)
         {
             delete namespaces[namespace.name];
             return true;
@@ -29,30 +39,20 @@ var online = new function()
 
     this.join = function(client, namespace_name)
     {
-        if (namespace_name[0] !== '/')
-        {
-            // Prefix the namespace to prevent from overwrite of internal Object structure
-            namespace_name = '/' + namespace_name;
-        }
+        var namespace = this.namespace(namespace_name);
 
         if (client.namespace)
         {
-            if (client.namespace.name === namespace_name)
+            if (client.namespace === namespace)
             {
                 // Client subscribe to its current namespace, nothing to be done
                 return;
             }
 
-            this.remove(client);
+            this.leave(client);
         }
 
-        var namespace = namespaces[namespace_name];
-        if (!namespace)
-        {
-            namespace = this.create(namespace_name);
-        }
-
-        namespace.members.push(client);
+        namespace.members++;
         client.namespace = namespace;
         this.notify(namespace);
     }
@@ -62,8 +62,8 @@ var online = new function()
         if (client.namespace)
         {
             var namespace = client.namespace;
-            namespace.members.splice(namespace.members.indexOf(client), 1);
-            if (!this.clean(namespace))
+            namespace.members--;
+            if (!this.clean_namespace(namespace))
             {
                 this.notify(namespace);
             }
@@ -78,14 +78,10 @@ var online = new function()
         var info = {};
         for (var i in namespace_names)
         {
-            var namespace = namespaces[namespace_names[i]];
-            if (!namespace)
-            {
-                namespace = this.create(namespace_names[i]);
-            }
+            var namespace = this.namespace(namespace_names[i]);
             namespace.listeners.push(client);
             client.listened.push(namespace);
-            info[namespace.name] = namespace.members.length;
+            info[namespace.name] = namespace.members;
         }
         client.send(JSON.stringify(info));
     }
@@ -98,7 +94,7 @@ var online = new function()
             {
                 var namespace = client.listened[i];
                 namespace.listeners.splice(namespace.listeners.indexOf(client), 1);
-                this.clean(namespace);
+                this.clean_namespace(namespace);
             }
             delete client.listened;
         }
@@ -113,7 +109,7 @@ var online = new function()
     this.notify = function(namespace)
     {
         var info = {};
-        info[namespace.name] = namespace.members.length;
+        info[namespace.name] = namespace.members;
         info = JSON.stringify(info);
         for (var i in namespace.listeners)
         {
@@ -123,7 +119,8 @@ var online = new function()
 
     this.info = function(namespace_name)
     {
-        return namespaces[namespace_name] ? namespaces[namespace_name].members.length : 0;
+        var namespace = this.namespace(namespace_name, false);
+        return namespace ? namespace.members : 0;
     }
 
     this.stats = function()
@@ -131,7 +128,8 @@ var online = new function()
         var stats = {};
         for (var namespace_name in namespaces)
         {
-            stats[namespace_name] = namespaces[namespace_name].members.length;
+            var namespace = this.namespace(namespace_name);
+            stats[namespace.name] = namespace.members;
         }
         return stats;
     }
@@ -166,7 +164,7 @@ var server = http.createServer(function(req, res)
         res.write('<script>\n');
         res.write('var socket = new io.Socket(location.host);\n');
         res.write('socket.connect();\n');
-        res.write('socket.on("connect", function() {socket.send("{\\"join\\": \\""+location.pathname+"\\"}");});\n');
+        res.write('socket.on("connect", function() {socket.send(JSON.stringify({join: location.pathname, listen: [location.pathname]}));});\n');
         res.write('socket.on("message", function(count) {document.getElementById("total").innerHTML = count;});\n');
         res.write('</script>\n');
         res.end();
