@@ -56,9 +56,9 @@ var online = new function()
         }
     }
 
-    this.get = function(namespace)
+    this.get = function(namespace_name)
     {
-        return namespaces[namespace] ? namespaces[namespace].length : 0;
+        return namespaces[namespace_name] ? namespaces[namespace_name].length : 0;
     }
 
     this.notify = function(namespace)
@@ -68,6 +68,16 @@ var online = new function()
         {
             namespace[i].send(total);
         }
+    }
+
+    this.stats = function()
+    {
+        var stats = {};
+        for (var namespace_name in namespaces)
+        {
+            stats[namespace_name] = namespaces[namespace_name].length;
+        }
+        return stats;
     }
 }
 
@@ -81,7 +91,14 @@ var server = http.createServer(function(req, res)
         res.writeHead(200, {'Content-Type': 'application/json'});
         var jsonp = location.query.callback ? location.query.callback : location.query.jsonp;
         if (jsonp) res.write(jsonp + '(');
-        res.write(JSON.stringify(online.get(path.substr(0, path.length - 5))));
+        if (path === '/stats.json')
+        {
+            res.write(JSON.stringify(online.stats()));
+        }
+        else
+        {
+            res.write(JSON.stringify(online.get(path.substr(0, path.length - 5))));
+        }
         if (jsonp) res.write(')');
         res.end();
     }
