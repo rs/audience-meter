@@ -3,7 +3,8 @@ var http = require('http'),
     io = require('socket.io');
 
 var NAMESPACE_MAX_LEN = 50,
-    NAMESPACE_MAX_LISTEN = 20;
+    NAMESPACE_MAX_LISTEN = 20,
+    NOTIFY_MIN_INTERVAL = 500;
 
 var online = new function()
 {
@@ -23,6 +24,7 @@ var online = new function()
             namespace = namespaces[namespace_name] = {};
             namespace.members = 0;
             namespace.listeners = [];
+            namespace.lastNotified = 0;
             namespace.name = namespace_name;
         }
         return namespace;
@@ -108,13 +110,26 @@ var online = new function()
 
     this.notify = function(namespace)
     {
-        var info = {};
-        info[namespace.name] = namespace.members;
-        info = JSON.stringify(info);
-        for (var i in namespace.listeners)
+        if (namespace.notifier || namespace.listeners.length == 0) return;
+
+        var delay = NOTIFY_MIN_INTERVAL - Math.min(new Date() - namespace.lastNotified,  NOTIFY_MIN_INTERVAL);
+
+        namespace.notifier = setTimeout(function()
         {
-            namespace.listeners[i].send(info);
-        }
+            if (namespace.members !== namespace.lastNotifyValue)
+            {
+                var info = {};
+                info[namespace.name] = namespace.members;
+                info = JSON.stringify(info);
+                for (var i in namespace.listeners)
+                {
+                    namespace.listeners[i].send(info);
+                }
+                namespace.lastNotifyValue = namespace.members;
+                namespace.lastNotified = new Date();
+            }
+            delete namespace.notifier;
+        }, delay);
     }
 
     this.info = function(namespace_name)
@@ -209,6 +224,13 @@ socket.on('connection', function(client)
                 if (command.listen.length > NAMESPACE_MAX_LISTEN)
                 {
                     throw 'Maximum listenable namespaces is ' + NAMESPACE_MAX_LISTEN;
+                }
+                for (var i in command.listen)
+                {
+                    if (command.listen[i].length > NAMESPACE_MAX_LEN)
+                    {
+                        throw 'Maximum length for namespace is ' + NAMESPACE_MAX_LEN;
+                    }
                 }
                 listen = command.listen;
             }
