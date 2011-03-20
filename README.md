@@ -12,6 +12,7 @@ Audience Meter is a simple daemon written in [Node.js](http://nodejs.org) to mes
 
 - Namespaces to track an unlimited number of events
 - Long polling (thru [Socket.IO](http://socket.io) to report online presence, and subscribe to live counters
+- Monitoring interface on a dedicated port
 
 ## How to use
 
@@ -75,6 +76,20 @@ You can listen for several different events at the same time, for intance to sho
       <li>Event 2: <span id="event2_total">-</span> users
       <li>Event 3: <span id="event3_total">-</span> users
     </ul>
+
+## Monitoring Interface
+
+The daemon listen on the 1442 port on localhost in order to let another process to dump all namespace counters for monitoring or graphing purpose. One possible usage is to update RRD files to track the evolution of the audiance over time.
+
+The server send all namespaces and their associated counters separated by colon, one by line and then close the connection immediately.
+
+Here is a usage example using netcat:
+
+    $ nc localhost 1442
+    namespace1:123
+    namespace2:345
+    namespace3:678
+    ...
 
 ## License
 

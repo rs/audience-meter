@@ -1,7 +1,8 @@
 var http = require('http'),
     url = require('url'),
     fs = require('fs'),
-    io = require('socket.io');
+    io = require('socket.io'),
+    net = require('net');
 
 var DEBUG = process.argv.indexOf('-d') > 0,
     CMD_MAX_NAMESPACE_LEN = 50,
@@ -141,7 +142,7 @@ var online = new function()
         var stats = {};
         for (var namespace_name in namespaces)
         {
-            var namespace = this.namespace(namespace_name);
+            var namespace = this.namespace(namespace_name.substr(1));
             stats[namespace.name] = namespace.members;
         }
         return stats;
@@ -255,4 +256,15 @@ socket.on('connection', function(client)
     {
         online.remove(client);
     });
-}); 
+});
+
+// Port 1442 used to gather stats on all live namespaces (format: <namespace>:<total>\n)
+net.createServer(function(sock)
+{
+    var stats = online.stats();
+    for (var namespace in stats)
+    {
+        sock.write(namespace + ":" + stats[namespace] + '\n');
+    }
+    sock.end();
+}).listen(1442, 'localhost');
