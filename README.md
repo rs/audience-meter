@@ -15,7 +15,10 @@ Audience Meter is a simple daemon written in [Node.js](http://nodejs.org) to mes
 
 ## How to use
 
-Start by running the daemon on a server, root privilege is required to let the daemon listen on ports 80 and 843.
+Start by running the daemon on a server, root privilege is required to let the daemon listen on ports 80 and 843:
+
+    $ sudo node audience-meter.js -d
+    20 Mar 01:52:10 - socket.io ready - accepting connections
 
 In the webpage of the event, add the following javascript:
 

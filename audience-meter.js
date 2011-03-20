@@ -3,7 +3,8 @@ var http = require('http'),
     fs = require('fs'),
     io = require('socket.io');
 
-var CMD_MAX_NAMESPACE_LEN = 50,
+var DEBUG = process.argv.indexOf('-d') > 0,
+    CMD_MAX_NAMESPACE_LEN = 50,
     CMD_MAX_NAMESPACE_LISTEN = 20,
     NOTIFY_INTERVAL = 500;
 
@@ -186,7 +187,7 @@ var server = http.createServer(function(req, res)
 });
 server.listen(80);
 
-var socket = io.listen(server);
+var socket = io.listen(server, {log: DEBUG ? require('util').log : false});
 socket.on('connection', function(client)
 {
     client.on('message', function(data)
