@@ -70,13 +70,11 @@ var online = new function()
     this.listen = function(client, namespace_names)
     {
         this.unlisten(client);
-        client.listened = [];
         var info = {};
         namespace_names.forEach(function(namespace_name)
         {
             var namespace = $this.namespace(namespace_name);
             namespace.listeners.push(client);
-            client.listened.push(namespace);
             info[namespace.name] = namespace.members;
         });
         client.send(info);
@@ -84,14 +82,15 @@ var online = new function()
 
     this.unlisten = function(client)
     {
-        if (client.listened)
+        for (var namespace_name in namespaces)
         {
-            client.listened.forEach(function(namespace)
+            var namespace = namespaces[namespace_name];
+            var listenerIdx = namespace.listeners.indexOf(client);
+            if (listenerIdx !== -1)
             {
-                namespace.listeners.splice(namespace.listeners.indexOf(client), 1);
+                namespace.listeners.splice(listenerIdx, 1);
                 $this.clean_namespace(namespace);
-            });
-            delete client.listened;
+            }
         }
     }
 
