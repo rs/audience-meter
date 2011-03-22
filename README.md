@@ -81,14 +81,16 @@ You can listen for several different events at the same time, for intance to sho
 
 The daemon listen on the 1442 port on localhost in order to let another process to dump all namespace counters for monitoring or graphing purpose. One possible usage is to update RRD files to track the evolution of the audiance over time.
 
-The server send all namespaces and their associated counters separated by colon, one by line and then close the connection immediately.
+The server send all namespaces and their associated info separated by colon, one by line and then close the connection immediately. First field is the UNIX timestamp of the creation of the counter. The second field is the the total number of connections to the namespace since its creation. Finaly, the last field is current number of participents in the namespace:
+
+    <namespace_name>:<creation_timestamp>:<total_connections>:<total_connected>\n
 
 Here is a usage example using netcat:
 
     $ nc localhost 1442
-    namespace1:123
-    namespace2:345
-    namespace3:678
+    namespace1:1300804962:234:123
+    namespace2:1300804302:456:345
+    namespace3:1300824940:789:678
     ...
 
 ## License

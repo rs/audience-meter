@@ -21,7 +21,9 @@ var online = new function()
         if (!namespace && !no_auto_create)
         {
             namespace = namespaces['@' + namespace_name] = {};
+            namespace.created = Math.round(new Date().getTime() / 1000);
             namespace.members = 0;
+            namespace.connections = 0;
             namespace.listeners = [];
             namespace.name = namespace_name;
         }
@@ -53,6 +55,7 @@ var online = new function()
         }
 
         namespace.members++;
+        namespace.connections++;
         client.namespace = namespace;
     }
 
@@ -133,7 +136,7 @@ var online = new function()
     this.info = function(namespace_name)
     {
         var namespace = this.namespace(namespace_name, false);
-        return namespace ? namespace.members : 0;
+        return namespace ? namespace.members + ':' + namespace.connections : '0:0';
     }
 
     this.stats = function()
@@ -142,7 +145,12 @@ var online = new function()
         for (var namespace_name in namespaces)
         {
             var namespace = this.namespace(namespace_name.substr(1));
-            stats[namespace.name] = namespace.members;
+            stats[namespace.name] =
+            {
+                created: namespace.created,
+                members: namespace.members,
+                connections: namespace.connections
+            };
         }
         return stats;
     }
@@ -257,13 +265,14 @@ socket.on('connection', function(client)
     });
 });
 
-// Port 1442 used to gather stats on all live namespaces (format: <namespace>:<total>\n)
+// Port 1442 used to gather stats on all live namespaces (format: <namespace>:<created>:<members>:<connections>\n)
 net.createServer(function(sock)
 {
     var stats = online.stats();
     for (var namespace in stats)
     {
-        sock.write(namespace + ":" + stats[namespace] + '\n');
+        var ns = stats[namespace];
+        sock.write(namespace + ':' + ns.created + ':' + ns.members + ':' + ns.connections + '\n');
     }
     sock.end();
 }).listen(1442, 'localhost');
