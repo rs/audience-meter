@@ -7,6 +7,7 @@ var http = require('http'),
 var DEBUG = process.argv.indexOf('-d') > 0,
     CMD_MAX_NAMESPACE_LEN = 50,
     CMD_MAX_NAMESPACE_LISTEN = 20,
+    NAMESPACE_CLEAN_DELAY = 60000,
     NOTIFY_INTERVAL = 500;
 
 var online = new function()
@@ -34,8 +35,10 @@ var online = new function()
     {
         if (namespace.members == 0 && namespace.listeners.length == 0)
         {
-            delete namespaces['@' + namespace.name];
-            return true;
+            namespace.garbageTimer = setTimeout(function()
+            {
+                delete namespaces['@' + namespace.name];
+            }, NAMESPACE_CLEAN_DELAY);
         }
     }
 
@@ -54,6 +57,11 @@ var online = new function()
             this.leave(client);
         }
 
+        if (namespace.garbageTimer)
+        {
+            clearTimeout(namespace.garbageTimer);
+            delete namespace.garbageTimer;
+        }
         namespace.members++;
         namespace.connections++;
         client.namespace = namespace;
