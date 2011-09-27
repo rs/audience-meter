@@ -10,7 +10,7 @@ var DEBUG = process.argv.indexOf('-d') > 0,
     NAMESPACE_CLEAN_DELAY = 60000,
     NOTIFY_INTERVAL = 500;
 
-var online = function()
+var online = new function()
 {
     var namespaces = {},
         $this = this;
@@ -278,10 +278,6 @@ socket.on('connection', function(client)
 net.createServer(function(sock)
 {
     var stats = online.stats();
-    for (var namespace in stats)
-    {
-        var ns = stats[namespace];
-        sock.write(namespace + ':' + ns.created + ':' + ns.members + ':' + ns.connections + '\n');
-    }
+    sock.write(JSON.stringify(stats));
     sock.end();
 }).listen(1442, 'localhost');
