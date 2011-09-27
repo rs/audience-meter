@@ -10,7 +10,7 @@ var DEBUG = process.argv.indexOf('-d') > 0,
     NAMESPACE_CLEAN_DELAY = 60000,
     NOTIFY_INTERVAL = 500;
 
-var online = new function()
+var online = function()
 {
     var namespaces = {},
         $this = this;
@@ -29,18 +29,18 @@ var online = new function()
             namespace.name = namespace_name;
         }
         return namespace;
-    }
+    };
 
     this.clean_namespace = function(namespace)
     {
-        if (namespace.members == 0 && namespace.listeners.length == 0)
+        if (namespace.members === 0 && namespace.listeners.length === 0)
         {
             namespace.garbageTimer = setTimeout(function()
             {
                 delete namespaces['@' + namespace.name];
             }, NAMESPACE_CLEAN_DELAY);
         }
-    }
+    };
 
     this.join = function(client, namespace_name)
     {
@@ -65,7 +65,7 @@ var online = new function()
         namespace.members++;
         namespace.connections++;
         client.namespace = namespace;
-    }
+    };
 
     this.leave = function(client)
     {
@@ -76,7 +76,7 @@ var online = new function()
             this.clean_namespace(namespace);
             delete client.namespace;
         }
-    }
+    };
 
     this.listen = function(client, namespace_names)
     {
@@ -89,7 +89,7 @@ var online = new function()
             info[namespace.name] = namespace.members;
         });
         client.send(info);
-    }
+    };
 
     this.unlisten = function(client)
     {
@@ -103,13 +103,13 @@ var online = new function()
                 $this.clean_namespace(namespace);
             }
         }
-    }
+    };
 
     this.remove = function(client)
     {
         this.leave(client);
         this.unlisten(client);
-    }
+    };
 
     this.notify = function()
     {
@@ -139,13 +139,13 @@ var online = new function()
                 delete listener.bufferNotif;
             }
         });
-    }
+    };
 
     this.info = function(namespace_name)
     {
         var namespace = this.namespace(namespace_name, false);
         return namespace ? namespace.members + ':' + namespace.connections : '0:0';
-    }
+    };
 
     this.stats = function()
     {
@@ -161,8 +161,8 @@ var online = new function()
             };
         }
         return stats;
-    }
-}
+    };
+};
 
 setInterval(online.notify, NOTIFY_INTERVAL);
 
@@ -198,7 +198,7 @@ var server = http.createServer(function(req, res)
     else
     {
         res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end(demo.replace(/{hostname}/g, req.headers.host).replace(/{pathname}/g, path));
+        res.end(demo.replace(/\{hostname\}/g, req.headers.host).replace(/\{pathname\}/g, path));
     }
 });
 server.listen(80);
@@ -211,11 +211,12 @@ socket.on('connection', function(client)
         var join = null, listen = [];
         try
         {
+            var command;
             try
             {
-                var command = JSON.parse(data);
+                command = JSON.parse(data);
             }
-            catch(err)
+            catch(e)
             {
                 throw 'Invalid JSON command';
             }
@@ -223,7 +224,7 @@ socket.on('connection', function(client)
             {
                 if (typeof command.join != 'string')
                 {
-                    throw 'Invalid join value: must be a string'
+                    throw 'Invalid join value: must be a string';
                 }
                 if (command.join.length > CMD_MAX_NAMESPACE_LEN)
                 {
