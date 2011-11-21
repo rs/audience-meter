@@ -25,11 +25,10 @@ In the webpage of the event, add the following javascript:
 
     <script src="http://{hostname}/socket.io/socket.io.js"></script>
     <script>
-    var socket = new io.Socket("{hostname}");
-    socket.connect();
+    var socket = io.connect("http://{hostname}");
     socket.on("connect", function()
     {
-        socket.send(JSON.stringify({join: "{event_name}"}));
+        socket.emit("join", "{event_name}");
     });
     </script>
 
@@ -37,15 +36,19 @@ You may want to report the current number of online users on the event. To do th
 
     <script src="http://{hostname}/socket.io/socket.io.js"></script>
     <script>
-    var socket = new io.Socket("{hostname}");
-    socket.connect();
+    var socket = io.connect("http://{hostname}");
     socket.on("connect", function()
     {
-        socket.send(JSON.stringify({join: "{event_name}", listen: ["{event_name}"]}));
+        socket.emit("join", "{event_name}");
+        socket.emit("listen", ["{event_name}"]);
     });
-    socket.on("message", function(data)
+    socket.on("statechange", function(info)
     {
-        document.getElementById("total").innerHTML = data["{event_name}"];
+        document.getElementById("total").innerHTML = info.total;
+    });
+    socket.on("error", function(message)
+    {
+        console.error("[audience-meter] " + message);
     });
     </script>
     
@@ -56,18 +59,29 @@ You can listen for several different events at the same time, for intance to sho
 
     <script src="http://{hostname}/socket.io/socket.io.js"></script>
     <script>
+    var socket = io.connect("http://{hostname}");
+    socket.on("connect", function()
+    {
+        socket.emit("listen", ["event1", "event2", "event3"]);
+    });
+    socket.on("statechange", function(info)
+    {
+        document.getElementById("total").innerHTML = info.total;
+    });
+    socket.on("error", function(message)
+    {
+        console.error("[audience-meter] " + message);
+    });
+
     var socket = new io.Socket("{hostname}");
     socket.connect();
     socket.on("connect", function()
     {
         socket.send(JSON.stringify({listen: ["event1", "event2", "event3"]}));
     });
-    socket.on("message", function(data)
+    socket.on("statechange", function(info)
     {
-        data.forEach(function(event)
-        {
-            document.getElementById(event + "_total").innerHTML = data[event];
-        }
+        document.getElementById(info.name + "_total").innerHTML = info.total;
     });
     </script>
 

@@ -3,37 +3,37 @@
 Connected users to {pathname}: <span id="total">-</span>
 <script src="http://{hostname}/socket.io/socket.io.js"></script>
 <script>
-var socket = new io.Socket("{hostname}");
-socket.connect();
+var socket = io.connect("http://{hostname}");
 socket.on("connect", function()
 {
-    socket.send(JSON.stringify
-    ({
-        join: "{pathname}",
-        listen: ["{pathname}"]
-    }));
+    socket.emit("join", "{pathname}");
+    socket.emit("listen", ["{pathname}"]);
 });
-socket.on("message", function(data)
+socket.on("statechange", function(info)
 {
-    document.getElementById("total").innerHTML = data["{pathname}"];
+    document.getElementById("total").innerHTML = info.total;
+});
+socket.on("error", function(message)
+{
+    console.error("[audience-meter] " + message);
 });
 </script>
 <pre>
 &lt;script src="http://{hostname}/socket.io/socket.io.js">&lt;/script>
 &lt;script>
-var socket = new io.Socket("{hostname}");
-socket.connect();
+var socket = io.connect("http://{hostname}");
 socket.on("connect", function()
 {
-    socket.send(JSON.stringify
-    ({
-        join: "{pathname}",
-        listen: ["{pathname}"]
-    }));
+    socket.emit("join", "{pathname}");
+    socket.emit("listen", ["{pathname}"]);
 });
-socket.on("message", function(data)
+socket.on("statechange", function(info)
 {
-    document.getElementById("total").innerHTML = data["{pathname}"];
+    document.getElementById("total").innerHTML = info.total;
+});
+socket.on("error", function(message)
+{
+    console.error("[audience-meter] " + message);
 });
 &lt;/script>
 </pre>

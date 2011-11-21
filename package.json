@@ -1,0 +1,9 @@
+{
+  "name": "audience-meter",
+  "version": "0.0.1",
+  "dependencies":
+  {
+      "socket.io": "0.8.7"
+  }
+}
+

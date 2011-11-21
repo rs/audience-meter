@@ -1,14 +1,16 @@
-var http = require('http'),
-    url = require('url'),
-    fs = require('fs'),
-    io = require('socket.io'),
-    net = require('net');
-
 var DEBUG = process.argv.indexOf('-d') > 0,
     CMD_MAX_NAMESPACE_LEN = 50,
     CMD_MAX_NAMESPACE_LISTEN = 20,
     NAMESPACE_CLEAN_DELAY = 60000,
     NOTIFY_INTERVAL = 500;
+
+var url = require('url'),
+    fs = require('fs'),
+    server = require('http').createServer(serverHandler),
+    io = require('socket.io').listen(server, {log: DEBUG ? require('util').log : false}),
+    net = require('net');
+
+server.listen(80);
 
 var online = new function()
 {
@@ -25,7 +27,6 @@ var online = new function()
             namespace.created = Math.round(new Date().getTime() / 1000);
             namespace.members = 0;
             namespace.connections = 0;
-            namespace.listeners = [];
             namespace.name = namespace_name;
         }
         return namespace;
@@ -33,7 +34,7 @@ var online = new function()
 
     this.clean_namespace = function(namespace)
     {
-        if (namespace.members === 0 && namespace.listeners.length === 0)
+        if (namespace.members === 0)
         {
             namespace.garbageTimer = setTimeout(function()
             {
@@ -44,19 +45,33 @@ var online = new function()
 
     this.join = function(client, namespace_name)
     {
-        var namespace = this.namespace(namespace_name);
+        var self = this;
 
-        if (client.namespace)
+        client.get('namespace', function(err, old_namespace_name)
         {
-            if (client.namespace === namespace)
+            if (old_namespace_name === namespace_name)
             {
                 // Client subscribe to its current namespace, nothing to be done
                 return;
             }
 
-            this.leave(client);
-        }
+            if (old_namespace_name)
+            {
+                self.leave(client, old_namespace_name, function()
+                {
+                    self._join(client, namespace_name);
+                });
+            }
+            else
+            {
+                self._join(client, namespace_name);
+            }
+        });
+    };
 
+    this._join = function(client, namespace_name)
+    {
+        var namespace = this.namespace(namespace_name);
         if (namespace.garbageTimer)
         {
             clearTimeout(namespace.garbageTimer);
@@ -64,81 +79,54 @@ var online = new function()
         }
         namespace.members++;
         namespace.connections++;
-        client.namespace = namespace;
+        client.set('namespace', namespace_name);
     };
 
-    this.leave = function(client)
+    this.leave = function(client, namespace_name, callback)
     {
-        if (client.namespace)
+        var self = this;
+
+        if (!namespace_name)
         {
-            var namespace = client.namespace;
+            client.get('namespace', function(err, ns)
+            {
+                if (ns) self.leave(client, ns, callback);
+            });
+        }
+        else
+        {
+            var namespace = this.namespace(namespace_name);
             namespace.members--;
             this.clean_namespace(namespace);
-            delete client.namespace;
+            client.del('namespace', callback);
         }
     };
 
     this.listen = function(client, namespace_names)
     {
-        this.unlisten(client);
         var info = {};
         namespace_names.forEach(function(namespace_name)
         {
             var namespace = $this.namespace(namespace_name);
-            namespace.listeners.push(client);
-            info[namespace.name] = namespace.members;
+            client.volatile.emit('statechange', {name: namespace_name, total: namespace.members});
+            client.join(namespace_name);
         });
-        client.send(info);
-    };
-
-    this.unlisten = function(client)
-    {
-        for (var namespace_name in namespaces)
-        {
-            var namespace = namespaces[namespace_name];
-            var listenerIdx = namespace.listeners.indexOf(client);
-            if (listenerIdx !== -1)
-            {
-                namespace.listeners.splice(listenerIdx, 1);
-                $this.clean_namespace(namespace);
-            }
-        }
-    };
-
-    this.remove = function(client)
-    {
-        this.leave(client);
-        this.unlisten(client);
     };
 
     this.notify = function()
     {
-        var listeners = [];
         for (var namespace_name in namespaces)
         {
             var namespace = namespaces[namespace_name];
-            if (namespace.listeners.length === 0 || namespace.lastNotifiedValue === namespace.members)
+            if (namespace.lastNotifiedValue === namespace.members)
             {
-                // Only notify if there is some listeners a total members changed since the last notice
+                // Only notify if total members changed since the last notice
                 continue;
             }
-            namespace.listeners.forEach(function(listener)
-            {
-                if (!listener.bufferNotif) listener.bufferNotif = {};
-                listener.bufferNotif[namespace.name] = namespace.members;
-            });
+            var info = {};
             namespace.lastNotifiedValue = namespace.members;
-            listeners = listeners.concat(namespace.listeners);
+            io.sockets.in(namespace.name).volatile.emit('statechange', {name: namespace.name, total: namespace.members});
         }
-
-        listeners.forEach(function(listener)
-        {
-            if (listener.bufferNotif)
-            {
-                listener.send(listener.bufferNotif);
-                delete listener.bufferNotif;
-            }
-        });
     };
 
     this.info = function(namespace_name)
@@ -174,7 +162,7 @@ fs.readFile('./demo.html', function (err, data)
 });
 
 
-var server = http.createServer(function(req, res)
+function serverHandler(req, res)
 {
     var location = url.parse(req.url, true),
         path = location.pathname;
@@ -200,77 +188,64 @@ var server = http.createServer(function(req, res)
         res.writeHead(200, {'Content-Type': 'text/html'});
         res.end(demo.replace(/\{hostname\}/g, req.headers.host).replace(/\{pathname\}/g, path));
     }
-});
-server.listen(80);
+}
 
-var socket = io.listen(server, {log: DEBUG ? require('util').log : false});
-socket.on('connection', function(client)
+io.sockets.on('connection', function(client)
 {
-    client.on('message', function(data)
+    client.on('join', function(namespace)
     {
-        var join = null, listen = [];
         try
         {
-            var command;
-            try
+            if (typeof namespace != 'string')
             {
-                command = JSON.parse(data);
+                throw 'Invalid join value: must be a string';
             }
-            catch(e)
+            if (namespace.length > CMD_MAX_NAMESPACE_LEN)
             {
-                throw 'Invalid JSON command';
-            }
-            if (command.join)
-            {
-                if (typeof command.join != 'string')
-                {
-                    throw 'Invalid join value: must be a string';
-                }
-                if (command.join.length > CMD_MAX_NAMESPACE_LEN)
-                {
-                    throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
-                }
-                join = command.join;
-            }
-            if (command.listen)
-            {
-                if (typeof command.listen != 'object' || typeof command.listen.length != 'number')
-                {
-                    throw 'Invalid listen value: must be an array';
-                }
-                if (command.listen.length > CMD_MAX_NAMESPACE_LISTEN)
-                {
-                    throw 'Maximum listenable namespaces is ' + CMD_MAX_NAMESPACE_LISTEN;
-                }
-                command.listen.forEach(function(namespace)
-                {
-                    if (namespace.length > CMD_MAX_NAMESPACE_LEN)
-                    {
-                        throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
-                    }
-                });
-                listen = command.listen;
+                throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
             }
         }
         catch (err)
         {
-            client.send({err: err});
+            client.json.emit('error', err);
             return;
         }
 
-        if (join)
+        online.join(client, namespace);
+    });
+
+    client.on('listen', function(namespaces)
+    {
+        try
         {
-            online.join(client, join);
+            if (typeof namespaces != 'object' || typeof namespaces.length != 'number')
+            {
+                throw 'Invalid listen value: must be an array';
+            }
+            if (namespaces.length > CMD_MAX_NAMESPACE_LISTEN)
+            {
+                throw 'Maximum listenable namespaces is ' + CMD_MAX_NAMESPACE_LISTEN;
+            }
+            namespaces.forEach(function(namespace)
+            {
+                if (namespace.length > CMD_MAX_NAMESPACE_LEN)
+                {
+                    throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
+                }
+            });
+        }
+        catch (err)
+        {
+            client.json.emit('error', err);
+            return;
         }
 
-        if (listen)
-        {
-            online.listen(client, listen);
-        }
+        online.listen(client, namespaces);
     });
+
     client.on('disconnect', function()
     {
-        online.remove(client);
+        online.leave(client);
     });
 });
 
