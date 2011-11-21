@@ -7,7 +7,6 @@ var socket = io.connect("http://{hostname}");
 socket.on("connect", function()
 {
     socket.emit("join", "{pathname}");
-    socket.emit("listen", ["{pathname}"]);
 });
 socket.on("statechange", function(info)
 {
@@ -15,7 +14,7 @@ socket.on("statechange", function(info)
 });
 socket.on("error", function(message)
 {
-    console.error("[audience-meter] " + message);
+    alert(message);
 });
 </script>
 <pre>
@@ -25,7 +24,6 @@ var socket = io.connect("http://{hostname}");
 socket.on("connect", function()
 {
     socket.emit("join", "{pathname}");
-    socket.emit("listen", ["{pathname}"]);
 });
 socket.on("statechange", function(info)
 {
@@ -33,7 +31,7 @@ socket.on("statechange", function(info)
 });
 socket.on("error", function(message)
 {
-    console.error("[audience-meter] " + message);
+    alert(message);
 });
 &lt;/script>
 </pre>

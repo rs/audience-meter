@@ -212,6 +212,7 @@ io.sockets.on('connection', function(client)
         }
 
         online.join(client, namespace);
+        online.listen(client, [namespace]);
     });
 
     client.on('listen', function(namespaces)

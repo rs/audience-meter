@@ -21,7 +21,7 @@ Start by running the daemon on a server, root privilege is required to let the d
     $ sudo node audience-meter.js -d
     20 Mar 01:52:10 - socket.io ready - accepting connections
 
-In the webpage of the event, add the following javascript:
+In the webpage of the event, add the following javascript to join an event.:
 
     <script src="http://{hostname}/socket.io/socket.io.js"></script>
     <script>
@@ -32,7 +32,9 @@ In the webpage of the event, add the following javascript:
     });
     </script>
 
-You may want to report the current number of online users on the event. To do that, you have to listen for the event you joined:
+Note that you can only join a single event at a time for a given connection.
+
+You may want to report the current number of online users on the event. By default, joining an event listen for it. To get event members count when it changes, listen for the "statechange" event like this:
 
     <script src="http://{hostname}/socket.io/socket.io.js"></script>
     <script>
@@ -40,15 +42,10 @@ You may want to report the current number of online users on the event. To do th
     socket.on("connect", function()
     {
         socket.emit("join", "{event_name}");
-        socket.emit("listen", ["{event_name}"]);
     });
     socket.on("statechange", function(info)
     {
         document.getElementById("total").innerHTML = info.total;
-    });
-    socket.on("error", function(message)
-    {
-        console.error("[audience-meter] " + message);
     });
     </script>
     
