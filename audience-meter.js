@@ -10,6 +10,15 @@ var url = require('url'),
     io = require('socket.io').listen(server, {log: DEBUG ? require('util').log : false}),
     net = require('net');
 
+io.configure(function()
+{
+    io.enable('browser client minification');
+    io.enable('browser client etag');
+    io.enable('browser client gzip');
+    io.set('log level', 1);
+    io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling']);
+});
+
 server.listen(80);
 
 var online = new function()
