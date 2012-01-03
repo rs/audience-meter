@@ -2,7 +2,8 @@ var DEBUG = process.argv.indexOf('-d') > 0,
     CMD_MAX_NAMESPACE_LEN = 50,
     CMD_MAX_NAMESPACE_LISTEN = 20,
     NAMESPACE_CLEAN_DELAY = 60000,
-    NOTIFY_INTERVAL = 500;
+    NOTIFY_INTERVAL = 2000,
+    NOTIFY_DELTA_RATIO = 0.1;
 
 var url = require('url'),
     fs = require('fs'),
@@ -126,10 +127,11 @@ var online = new function()
     {
         for (var namespace_name in namespaces)
         {
-            var namespace = namespaces[namespace_name];
-            if (namespace.lastNotifiedValue === namespace.members)
+            var namespace = namespaces[namespace_name],
+                minDelta = Math.max(Math.floor(namespace.lastNotifiedValue * NOTIFY_DELTA_RATIO), 1);
+            if (Math.abs(namespace.lastNotifiedValue - namespace.members) < minDelta)
             {
-                // Only notify if total members changed since the last notice
+                // Only notify if total members significantly changed since the last notice
                 continue;
             }
             var info = {};
