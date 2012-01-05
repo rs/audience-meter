@@ -1,179 +1,33 @@
-var DEBUG = process.argv.indexOf('-d') > 0,
-    CMD_MAX_NAMESPACE_LEN = 50,
-    CMD_MAX_NAMESPACE_LISTEN = 20,
-    NAMESPACE_CLEAN_DELAY = 60000,
-    NOTIFY_INTERVAL = 2000,
-    NOTIFY_DELTA_RATIO = 0.1;
+var DEBUG = process.argv.indexOf('-d') > 0;
+
+var sockjsOptions =
+{
+    sockjs_url: "http://cdn.sockjs.org/sockjs-0.1.min.js",
+    jsessionid: false,
+    // kinda disable heartbeat as the nature of the service already does hearteating
+    heartbeat_delay: 9999999,
+    log: function(severity, message)
+    {
+        if (severity == 'error')
+        {
+            console.error(message);
+        }
+        else if (DEBUG)
+        {
+            console.log(message);
+        }
+    }
+};
 
 var url = require('url'),
     fs = require('fs'),
-    server = require('http').createServer(serverHandler),
-    io = require('socket.io').listen(server, {log: DEBUG ? require('util').log : false}),
-    net = require('net');
+    admin = require('net').createServer(),
+    httpd = require('http').createServer(),
+    sockjs = require('sockjs').createServer(sockjsOptions),
+    audience = require('./audience').createInstance();
 
-io.configure(function()
-{
-    io.enable('browser client minification');
-    io.enable('browser client etag');
-    io.enable('browser client gzip');
-    io.set('log level', 1);
-    io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling']);
-});
-
-server.listen(80);
-
-var online = new function()
-{
-    var namespaces = {},
-        $this = this;
-
-    this.namespace = function(namespace_name, no_auto_create)
-    {
-        // Prefix namespace in order to prevent from overwriting Object internal properties
-        var namespace = namespaces['@' + namespace_name];
-        if (!namespace && !no_auto_create)
-        {
-            namespace = namespaces['@' + namespace_name] = {};
-            namespace.created = Math.round(new Date().getTime() / 1000);
-            namespace.members = 0;
-            namespace.connections = 0;
-            namespace.name = namespace_name;
-        }
-        return namespace;
-    };
-
-    this.clean_namespace = function(namespace)
-    {
-        if (namespace.members === 0)
-        {
-            namespace.garbageTimer = setTimeout(function()
-            {
-                delete namespaces['@' + namespace.name];
-            }, NAMESPACE_CLEAN_DELAY);
-        }
-    };
-
-    this.join = function(client, namespace_name)
-    {
-        var self = this;
-
-        client.get('namespace', function(err, old_namespace_name)
-        {
-            if (old_namespace_name === namespace_name)
-            {
-                // Client subscribe to its current namespace, nothing to be done
-                return;
-            }
-
-            if (old_namespace_name)
-            {
-                self.leave(client, old_namespace_name, function()
-                {
-                    self._join(client, namespace_name);
-                });
-            }
-            else
-            {
-                self._join(client, namespace_name);
-            }
-        });
-    };
-
-    this._join = function(client, namespace_name)
-    {
-        var namespace = this.namespace(namespace_name);
-        if (namespace.garbageTimer)
-        {
-            clearTimeout(namespace.garbageTimer);
-            delete namespace.garbageTimer;
-        }
-        namespace.members++;
-        namespace.connections++;
-        client.set('namespace', namespace_name);
-    };
-
-    this.leave = function(client, namespace_name, callback)
-    {
-        var self = this;
-
-        if (!namespace_name)
-        {
-            client.get('namespace', function(err, ns)
-            {
-                if (ns) self.leave(client, ns, callback);
-            });
-        }
-        else
-        {
-            var namespace = this.namespace(namespace_name);
-            namespace.members--;
-            this.clean_namespace(namespace);
-            client.del('namespace', callback);
-        }
-    };
-
-    this.listen = function(client, namespace_names)
-    {
-        var info = {};
-        namespace_names.forEach(function(namespace_name)
-        {
-            var namespace = $this.namespace(namespace_name);
-            client.volatile.emit('statechange', {name: namespace_name, total: namespace.members});
-            client.join(namespace_name);
-        });
-    };
-
-    this.notify = function()
-    {
-        for (var namespace_name in namespaces)
-        {
-            var namespace = namespaces[namespace_name],
-                minDelta = Math.max(Math.floor(namespace.lastNotifiedValue * NOTIFY_DELTA_RATIO), 1);
-            if (Math.abs(namespace.lastNotifiedValue - namespace.members) < minDelta)
-            {
-                // Only notify if total members significantly changed since the last notice
-                continue;
-            }
-            var info = {};
-            namespace.lastNotifiedValue = namespace.members;
-            io.sockets.in(namespace.name).volatile.emit('statechange', {name: namespace.name, total: namespace.members});
-        }
-    };
-
-    this.info = function(namespace_name)
-    {
-        var namespace = this.namespace(namespace_name, false);
-        return namespace ? namespace.members + ':' + namespace.connections : '0:0';
-    };
-
-    this.stats = function()
-    {
-        var stats = {};
-        for (var namespace_name in namespaces)
-        {
-            var namespace = this.namespace(namespace_name.substr(1));
-            stats[namespace.name] =
-            {
-                created: namespace.created,
-                members: namespace.members,
-                connections: namespace.connections
-            };
-        }
-        return stats;
-    };
-};
-
-setInterval(online.notify, NOTIFY_INTERVAL);
-
-var demo;
-fs.readFile('./demo.html', function (err, data)
-{
-    if (err) throw err; 
-    demo = data.toString();
-});
-
-
-function serverHandler(req, res)
+httpd.listen(80);
+httpd.on('request', function(req, res)
 {
     var location = url.parse(req.url, true),
         path = location.pathname;
@@ -185,86 +39,55 @@ function serverHandler(req, res)
         if (jsonp) res.write(jsonp + '(');
         if (path === '/stats.json')
         {
-            res.write(JSON.stringify(online.stats()));
+            res.write(JSON.stringify(audience.stats()));
         }
         else
         {
-            res.write(JSON.stringify(online.info(path.substr(0, path.length - 5))));
+            res.write(JSON.stringify(audience.info(path.substr(0, path.length - 5))));
         }
         if (jsonp) res.write(')');
         res.end();
     }
+    else if (!path.match(/^\/audience/))
+    {
+        fs.readFile('./demo.html', function (err, data)
+        {
+            if (err)
+            {
+                res.writeHead(500, {'Content-Type': 'text/html'});
+                res.end();
+            }
+            else
+            {
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.end(data.toString().replace(/\{hostname\}/g, req.headers.host).replace(/\{namespace\}/g, path.replace(/^\/|\/.*/g, '')));
+            }
+        });
+    }
     else
     {
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end(demo.replace(/\{hostname\}/g, req.headers.host).replace(/\{pathname\}/g, path));
+        return false;
     }
-}
+});
 
-io.sockets.on('connection', function(client)
+sockjs.installHandlers(httpd, {prefix: '[/]audience/.*'});
+sockjs.on('connection', function(client)
 {
-    client.on('join', function(namespace)
+    if (client.pathname != '/')
     {
-        try
-        {
-            if (typeof namespace != 'string')
-            {
-                throw 'Invalid join value: must be a string';
-            }
-            if (namespace.length > CMD_MAX_NAMESPACE_LEN)
-            {
-                throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
-            }
-        }
-        catch (err)
-        {
-            client.json.emit('error', err);
-            return;
-        }
-
-        online.join(client, namespace);
-        online.listen(client, [namespace]);
-    });
-
-    client.on('listen', function(namespaces)
+        audience.join(client);
+    }
+    client.on('data', function(message)
     {
-        try
-        {
-            if (typeof namespaces != 'object' || typeof namespaces.length != 'number')
-            {
-                throw 'Invalid listen value: must be an array';
-            }
-            if (namespaces.length > CMD_MAX_NAMESPACE_LISTEN)
-            {
-                throw 'Maximum listenable namespaces is ' + CMD_MAX_NAMESPACE_LISTEN;
-            }
-            namespaces.forEach(function(namespace)
-            {
-                if (namespace.length > CMD_MAX_NAMESPACE_LEN)
-                {
-                    throw 'Maximum length for namespace is ' + CMD_MAX_NAMESPACE_LEN;
-                }
-            });
-        }
-        catch (err)
-        {
-            client.json.emit('error', err);
-            return;
-        }
-
-        online.listen(client, namespaces);
-    });
-
-    client.on('disconnect', function()
-    {
-        online.leave(client);
+        // TODO handle listen
+        conn.write(message);
     });
 });
 
 // Port 1442 used to gather stats on all live namespaces (format: <namespace>:<created>:<members>:<connections>\n)
-net.createServer(function(sock)
+admin.listen(1442, 'localhost');
+admin.on('connection', function(sock)
 {
-    var stats = online.stats();
-    sock.write(JSON.stringify(stats));
+    sock.write(JSON.stringify(audience.stats()));
     sock.end();
-}).listen(1442, 'localhost');
+});

@@ -1,38 +1,38 @@
 <html>
 <body>
-Connected users to {pathname}: <span id="total">-</span>
-<script src="http://{hostname}/socket.io/socket.io.js"></script>
+Connected users to {namespace}: <span id="total">-</span>
+<script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
 <script>
-var socket = io.connect("http://{hostname}");
-socket.on("connect", function()
+function connect(namespace)
 {
-    socket.emit("join", "{pathname}");
-});
-socket.on("statechange", function(info)
-{
-    document.getElementById("total").innerHTML = info.total;
-});
-socket.on("error", function(message)
-{
-    alert(message);
-});
+    var sock = new SockJS('http://{hostname}/audience/' + namespace);
+    sock.onmessage = function(e)
+    {
+        document.getElementById("total").innerHTML = JSON.parse(e.data).total;
+    };
+    sock.onclose = function()
+    {
+        setTimeout(function() {connect(namespace)}, 2000);
+    }
+}
+connect("{namespace}");
 </script>
 <pre>
-&lt;script src="http://{hostname}/socket.io/socket.io.js">&lt;/script>
+&lt;script src="http://cdn.sockjs.org/sockjs-0.1.min.js">&lt;/script>
 &lt;script>
-var socket = io.connect("http://{hostname}");
-socket.on("connect", function()
+function connect(namespace)
 {
-    socket.emit("join", "{pathname}");
-});
-socket.on("statechange", function(info)
-{
-    document.getElementById("total").innerHTML = info.total;
-});
-socket.on("error", function(message)
-{
-    alert(message);
-});
+    var sock = new SockJS('http://{hostname}/audience/' + namespace);
+    sock.onmessage = function(e)
+    {
+        document.getElementById("total").innerHTML = JSON.parse(e.data).total;
+    };
+    sock.onclose = function()
+    {
+        setTimeout(function() {connect(namespace)}, 2000);
+    }
+}
+connect("{namespace}");
 &lt;/script>
 </pre>
 </body>
