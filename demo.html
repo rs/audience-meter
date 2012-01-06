@@ -10,9 +10,16 @@ function connect(namespace)
     {
         document.getElementById("total").innerHTML = JSON.parse(e.data).total;
     };
-    sock.onclose = function()
+    sock.onopen = function(e)
     {
-        setTimeout(function() {connect(namespace)}, 2000);
+        console.log(sock.protocol);
+    }
+    sock.onclose = function(e)
+    {
+        if (!e.wasClean)
+        {
+            setTimeout(function() {connect(namespace)}, 2000);
+        }
     }
 }
 connect("{namespace}");
@@ -27,9 +34,16 @@ function connect(namespace)
     {
         document.getElementById("total").innerHTML = JSON.parse(e.data).total;
     };
-    sock.onclose = function()
+    sock.onopen = function(e)
     {
-        setTimeout(function() {connect(namespace)}, 2000);
+        console.log(sock.protocol);
+    }
+    sock.onclose = function(e)
+    {
+        if (!e.wasClean)
+        {
+            setTimeout(function() {connect(namespace)}, 2000);
+        }
     }
 }
 connect("{namespace}");

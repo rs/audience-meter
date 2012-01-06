@@ -6,47 +6,53 @@ Audience Meter is a simple daemon written in [Node.js](http://nodejs.org) to mes
 ## Requirements
 
 - [Node.js](http://nodejs.org)
-- [Socket.IO](http://socket.io)
+- [Sockjs](http://sockjs.org)
 
 ## Features
 
 - Namespaces to track an unlimited number of events
-- Long polling (thru [Socket.IO](http://socket.io) to report online presence, and subscribe to live counters
+- Cross browser websocket (thru [Sockjs](http://sockjs.org) to report online presence, and subscribe to live counters
 - Monitoring interface on a dedicated port
 
 ## How to use
 
-Start by running the daemon on a server, root privilege is required to let the daemon listen on ports 80 and 843:
+Start by running the daemon on a server, root privilege is required to let the daemon listen on ports 80:
 
     $ sudo node audience-meter.js -d
-    20 Mar 01:52:10 - socket.io ready - accepting connections
+    SockJS v0.1.2 bound to "[/]audience/.*"
 
 In the webpage of the event, add the following javascript to join an event.:
 
-    <script src="http://{hostname}/socket.io/socket.io.js"></script>
+    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
     <script>
-    var socket = io.connect("http://{hostname}");
-    socket.on("connect", function()
+    function connect(namespace)
     {
-        socket.emit("join", "{event_name}");
-    });
+        var sock = new SockJS('http://YOUR-SERVER.COM/audience/' + namespace);
+        // Auto-reconnect
+        sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
+    }
+    connect("{event_name}");
     </script>
 
-Note that you can only join a single event at a time for a given connection.
+Note that you can only join a single event at a time in a single page.
 
-You may want to report the current number of online users on the event. By default, joining an event listen for it. To get event members count when it changes, listen for the "statechange" event like this:
+You may want to report the current number of online users on the event. By default, joining an event listen for it. To get event members count when it changes, listen for incoming messages like this:
 
-    <script src="http://{hostname}/socket.io/socket.io.js"></script>
+    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
     <script>
-    var socket = io.connect("http://{hostname}");
-    socket.on("connect", function()
+    function connect(namespace)
     {
-        socket.emit("join", "{event_name}");
-    });
-    socket.on("statechange", function(info)
-    {
-        document.getElementById("total").innerHTML = info.total;
-    });
+        var sock = new SockJS('http://YOUR-SERVER.COM/audience/' + namespace);
+        // Auto-reconnect
+        sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
+
+        sock.onmessage = function(e)
+        {
+            var info = JSON.parse(e.data);
+            document.getElementById("total").innerHTML = info.total;
+        };
+    }
+    connect("{event_name}");
     </script>
     
     Connected users <span id="total">-</span>
@@ -54,32 +60,28 @@ You may want to report the current number of online users on the event. By defau
 
 You can listen for several different events at the same time, for intance to show the number of online users on an event list. All counters will be updated in real time:
 
-    <script src="http://{hostname}/socket.io/socket.io.js"></script>
+    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
     <script>
-    var socket = io.connect("http://{hostname}");
-    socket.on("connect", function()
+    function connect()
     {
-        socket.emit("listen", ["event1", "event2", "event3"]);
-    });
-    socket.on("statechange", function(info)
-    {
-        document.getElementById("total").innerHTML = info.total;
-    });
-    socket.on("error", function(message)
-    {
-        console.error("[audience-meter] " + message);
-    });
+        // Connecting to /audience/lobby won't join a namespace
+        var sock = new SockJS('http://YOUR-SERVER.COM/audience/lobby');
+        // Auto-reconnect
+        sock.onclose = function() {setTimeout(function() {connect()}, 2000);}
 
-    var socket = new io.Socket("{hostname}");
-    socket.connect();
-    socket.on("connect", function()
-    {
-        socket.send(JSON.stringify({listen: ["event1", "event2", "event3"]}));
-    });
-    socket.on("statechange", function(info)
-    {
-        document.getElementById(info.name + "_total").innerHTML = info.total;
-    });
+        sock.onopen = function(e)
+        {
+            // Sets the list of events to subscribe to
+            sock.write(JSON.stringify(["event1", "event2", "event3"]));
+        };
+
+        sock.onmessage = function(e)
+        {
+            var info = JSON.parse(e.data);
+            document.getElementById(info.name + "_total").innerHTML = info.total;
+        };
+    }
+    connect();
     </script>
 
     <ul>

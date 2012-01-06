@@ -2,7 +2,7 @@ var options = require('commander');
 
 options
     .version('0.2.0')
-    .option('-d --debug', 'Log everything')
+    .option('-d --debug', 'Log everything + profiling')
     .option('--notify-delta-ratio <ratio>', 'Minimum delta of number of members to reach before to notify ' +
                                             'listeners based on a fraction of the current number of members (default 0.1)', parseFloat)
     .option('--notify-min-delay <seconds>', 'Minimum delay between notifications (default 2)', parseFloat)
@@ -11,24 +11,23 @@ options
     .option('--namespace-clean-delay <seconds>', 'Minimum delay to wait before to clean an empty namespace (default 60)', parseFloat)
     .parse(process.argv);
 
+function logger(severity, message)
+{
+    if (severity == 'error')
+    {
+        console.error(message);
+    }
+    else if (options.debug)
+    {
+        console.log(message);
+    }
+}
 
 var sockjsOptions =
 {
     sockjs_url: "http://cdn.sockjs.org/sockjs-0.1.min.js",
     jsessionid: false,
-    // kinda disable heartbeat as the nature of the service already does hearteating
-    heartbeat_delay: 9999999,
-    log: function(severity, message)
-    {
-        if (severity == 'error')
-        {
-            console.error(message);
-        }
-        else if (options.debug)
-        {
-            console.log(message);
-        }
-    }
+    log: logger
 };
 
 var audienceOptions =
@@ -36,7 +35,8 @@ var audienceOptions =
     notify_delta_ratio: options.notifyDeltaRatio || 0.1,
     notify_min_delay: options.notifyMinDelay || 2,
     notify_max_delay: options.notifyMaxDelay || 60,
-    namespace_clean_delay: options.namespaceCleanDelay || 60
+    namespace_clean_delay: options.namespaceCleanDelay || 60,
+    log: logger
 };
 
 var url = require('url'),
@@ -90,17 +90,32 @@ httpd.on('request', function(req, res)
     }
 });
 
-sockjs.installHandlers(httpd, {prefix: '[/]audience/.*'});
+sockjs.installHandlers(httpd, {prefix: '[/]audience\/[^/]+'});
 sockjs.on('connection', function(client)
 {
-    if (client.pathname != '/')
+    try
     {
-        audience.join(client);
+        var namespaceName = client.pathname.replace(/^\/audience\/|\/.*/g, '');
+        if (namespaceName && namespaceName != 'lobby')
+        {
+            audience.join(client, namespaceName);
+        }
     }
+    catch (e)
+    {
+        if (options.debug) console.warn(e);
+    }
+
     client.on('data', function(message)
     {
-        // TODO handle listen
-        conn.write(message);
+        try
+        {
+            audience.subscribe(client, JSON.parse(message));
+        }
+        catch (e)
+        {
+            if (options.debug) console.log(e);
+        }
     });
 });
 
