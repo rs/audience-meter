@@ -9,8 +9,8 @@ function Audience(options)
     this.options =
     {
         notify_delta_ratio: 0.1,
-        notify_min_interval: 2,
-        notify_max_interval: 60,
+        notify_min_delay: 2,
+        notify_max_delay: 60,
         namespace_clean_delay: 60
     };
 
@@ -23,7 +23,7 @@ function Audience(options)
     }
 
     var self = this;
-    setInterval(function() {self.notifyAll();}, this.options.notify_min_interval * 1000);
+    setInterval(function() {self.notifyAll();}, this.options.notify_min_delay * 1000);
 }
 
 Audience.prototype.namespace = function(name, auto_create)
@@ -117,7 +117,7 @@ Audience.prototype.notifyAll = function()
         var namespace = this.namespaces[key],
             minDelta = 1;
 
-        if (Math.round(new Date().getTime() / 1000) - namespace.last.timestamp < this.options.notify_max_interval)
+        if (Math.round(new Date().getTime() / 1000) - namespace.last.timestamp < this.options.notify_max_delay)
         {
             minDelta = Math.max(Math.floor(namespace.last.members * this.options.notify_delta_ratio), 1);
         }

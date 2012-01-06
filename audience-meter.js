@@ -1,4 +1,16 @@
-var DEBUG = process.argv.indexOf('-d') > 0;
+var options = require('commander');
+
+options
+    .version('0.2.0')
+    .option('-d --debug', 'Log everything')
+    .option('--notify-delta-ratio <ratio>', 'Minimum delta of number of members to reach before to notify ' +
+                                            'listeners based on a fraction of the current number of members (default 0.1)', parseFloat)
+    .option('--notify-min-delay <seconds>', 'Minimum delay between notifications (default 2)', parseFloat)
+    .option('--notify-max-delay <seconds>', 'Maximum delay to wait before not sending notification ' +
+                                            'because of min-delta not reached (default 60)', parseFloat)
+    .option('--namespace-clean-delay <seconds>', 'Minimum delay to wait before to clean an empty namespace (default 60)', parseFloat)
+    .parse(process.argv);
+
 
 var sockjsOptions =
 {
@@ -12,11 +24,19 @@ var sockjsOptions =
         {
             console.error(message);
         }
-        else if (DEBUG)
+        else if (options.debug)
         {
             console.log(message);
         }
     }
+};
+
+var audienceOptions =
+{
+    notify_delta_ratio: options.notifyDeltaRatio || 0.1,
+    notify_min_delay: options.notifyMinDelay || 2,
+    notify_max_delay: options.notifyMaxDelay || 60,
+    namespace_clean_delay: options.namespaceCleanDelay || 60
 };
 
 var url = require('url'),
@@ -24,7 +44,7 @@ var url = require('url'),
     admin = require('net').createServer(),
     httpd = require('http').createServer(),
     sockjs = require('sockjs').createServer(sockjsOptions),
-    audience = require('./audience').createInstance();
+    audience = require('./audience').createInstance(audienceOptions);
 
 httpd.listen(80);
 httpd.on('request', function(req, res)
