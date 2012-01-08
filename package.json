@@ -1,6 +1,6 @@
 {
   "name": "audience-meter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "dependencies":
   {
       "sockjs": "0.1.2",

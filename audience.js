@@ -1,12 +1,10 @@
-var util = require('util');
-
-module.exports.createInstance = function(options)
-{
-    return new Audience(options);
-};
+var util = require('util'),
+    events = require('events');
 
 function Audience(options)
 {
+    if (!(this instanceof Audience)) return new Audience(options);
+
     this.namespaces = {};
     this.options =
     {
@@ -29,6 +27,10 @@ function Audience(options)
     setInterval(function() {self.notifyAll();}, this.options.notify_min_delay * 1000);
     this.log = this.options.log;
 }
+
+util.inherits(Audience, events.EventEmitter);
+
+module.exports.Audience = Audience;
 
 Audience.prototype.namespace = function(name, auto_create)
 {
@@ -54,8 +56,7 @@ Audience.prototype.namespace = function(name, auto_create)
             {
                 members: 0,
                 timestamp: 0
-            },
-            clients: {}
+            }
         };
         this.namespaces['@' + name] = namespace;
 
@@ -67,7 +68,7 @@ Audience.prototype.namespace = function(name, auto_create)
 
 Audience.prototype.cleanNamespace = function(namespace)
 {
-    if (namespace.clients.length === 0 && !namespace.garbageTimer)
+    if (namespace.members === 0 && !namespace.garbageTimer)
     {
         var self = this;
         this.log('debug', 'Schedule delete of `' + namespace.name + '\' namespace');
@@ -80,7 +81,7 @@ Audience.prototype.cleanNamespace = function(namespace)
     }
 };
 
-Audience.prototype.join = function(client, namespaceName)
+Audience.prototype.join = function(namespaceName)
 {
     var self = this,
         namespace = this.namespace(namespaceName);
@@ -89,103 +90,21 @@ Audience.prototype.join = function(client, namespaceName)
 
     namespace.members++;
     namespace.connections++;
-    namespace.clients[client.id] = client;
 
-    this.notify(namespace, client);
-
-    client.once('close', function()
-    {
-        self.leave(this, namespaceName);
-    });
-
-    this.log('debug', 'Client `' + client.id + '\' joined `' + namespace.name + '\' namespace');
+    this.log('debug', 'Join `' + namespace.name + '\' namespace: #' + namespace.members);
 };
 
-Audience.prototype.leave = function(client, namespaceName)
+Audience.prototype.leave = function(namespaceName)
 {
     var namespace = this.namespace(namespaceName);
-
     if (!namespace) return;
-    if (!namespace.clients[client.id]) return;
-
     namespace.members--;
-    delete namespace.clients[client.id];
 
-    this.log('debug', 'Client `' + client.id + '\' leaved `' + namespace.name + '\' namespace');
-};
-
-Audience.prototype.subscribe = function(client, namespaces)
-{
-    if (!util.isArray(namespaces))
-    {
-        throw new Error('Array required');
-    }
-
-    namespaces.forEach(function(namespaceName)
-    {
-        if (typeof namespaceName != 'string')
-        {
-            throw new Error('Array of strings required');
-        }
-    });
-
-    var self = this;
-
-    client.namespaces = [];
-
-    namespaces.forEach(function(namespaceName)
-    {
-        var namespace = self.namespace(namespaceName);
-        if (!namespace.clients[client.id])
-        {
-            namespace.clients[client.id] = client;
-            client.namespaces.push(namespace.name);
-        }
-    });
-
-    this.log('debug', 'Client `' + client.id + '\' subscribed to namespaces: ' + namespaces.join(', '));
-
-    client.once('close', function()
-    {
-        self.unsubscribeNamespaces(this);
-    });
-};
-
-Audience.prototype.unsubscribeNamespaces = function(client)
-{
-    var self = this;
-    if (!client.namespaces) return;
-    client.namespaces.forEach(function(namespaceName)
-    {
-        var namespace = self.namespace(namespaceName);
-        delete namespace.clients[client.id];
-    });
-    this.log('debug', 'Client `' + client.id + '\' unsubscribed from namespaces: ' + namespaces.join(', '));
-    delete client.namespaces;
-};
-
-Audience.prototype.notify = function(namespace, client)
-{
-    if (client)
-    {
-        client.write(JSON.stringify({name: namespace.name, total: namespace.members}));
-    }
-    else
-    {
-        this.log('debug', 'Notify `' + namespace.name + '\' namespace: ' + namespace.members);
-
-        for (var id in namespace.clients)
-        {
-            if (!namespace.clients.hasOwnProperty(id)) continue;
-            this.notify(namespace, namespace.clients[id]);
-        }
-    }
+    this.log('debug', 'Leave `' + namespace.name + '\' namespace: #' + namespace.members);
 };
 
 Audience.prototype.notifyAll = function()
 {
-    this.log('debug', 'Notify all namespaces');
-
     for (var key in this.namespaces)
     {
         if (!this.namespaces.hasOwnProperty(key)) continue;
@@ -193,7 +112,7 @@ Audience.prototype.notifyAll = function()
         var namespace = this.namespaces[key],
             minDelta = 1;
 
-        if (namespace.clients.length === 0)
+        if (namespace.members === 0)
         {
             this.cleanNamespace(namespace);
             continue;
@@ -211,7 +130,10 @@ Audience.prototype.notifyAll = function()
         }
 
         namespace.last = {members: namespace.members, timestamp: Math.round(new Date().getTime() / 1000)};
-        this.notify(namespace);
+
+        this.log('debug', 'Notify `' + namespace.name + '\' namespace with ' + namespace.members + ' members');
+
+        this.emit('notify', namespace);
     }
 };
 
