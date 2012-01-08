@@ -5,15 +5,11 @@ Connected users to {namespace}: <span id="total">-</span>
 <script>
 function connect(namespace)
 {
-    var sock = new SockJS('http://{hostname}/audience/' + namespace);
+    var sock = new SockJS('http://{hostname}/' + namespace);
     sock.onmessage = function(e)
     {
         document.getElementById("total").innerHTML = JSON.parse(e.data).total;
     };
-    sock.onopen = function(e)
-    {
-        console.log(sock.protocol);
-    }
     sock.onclose = function(e)
     {
         if (!e.wasClean)
@@ -29,15 +25,11 @@ connect("{namespace}");
 &lt;script>
 function connect(namespace)
 {
-    var sock = new SockJS('http://{hostname}/audience/' + namespace);
+    var sock = new SockJS('http://{hostname}/' + namespace);
     sock.onmessage = function(e)
     {
         document.getElementById("total").innerHTML = JSON.parse(e.data).total;
     };
-    sock.onopen = function(e)
-    {
-        console.log(sock.protocol);
-    }
     sock.onclose = function(e)
     {
         if (!e.wasClean)

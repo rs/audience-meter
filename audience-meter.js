@@ -41,61 +41,32 @@ var audienceOptions =
 
 var url = require('url'),
     fs = require('fs'),
-    admin = require('net').createServer(),
-    httpd = require('http').createServer(),
+    net = require('net'),
+    http = require('http'),
     sockjs = require('sockjs').createServer(sockjsOptions),
     audience = require('./audience').createInstance(audienceOptions);
 
-httpd.listen(80);
-httpd.on('request', function(req, res)
+var demo = http.Server();
+demo.listen(8080);
+demo.on('request', function(req, res)
 {
-    var location = url.parse(req.url, true),
-        path = location.pathname;
+    var path = url.parse(req.url, true).pathname;
 
-    if (path.substr(path.length - 5, 5) === '.json')
+    fs.readFile('./demo.html', function (err, data)
     {
-        res.writeHead(200, {'Content-Type': 'application/json'});
-        var jsonp = location.query.callback ? location.query.callback : location.query.jsonp;
-        if (jsonp) res.write(jsonp + '(');
-        if (path === '/stats.json')
-        {
-            res.write(JSON.stringify(audience.stats()));
-        }
-        else
-        {
-            res.write(JSON.stringify(audience.info(path.substr(0, path.length - 5))));
-        }
-        if (jsonp) res.write(')');
-        res.end();
-    }
-    else if (!path.match(/^\/audience/))
-    {
-        fs.readFile('./demo.html', function (err, data)
-        {
-            if (err)
-            {
-                res.writeHead(500, {'Content-Type': 'text/html'});
-                res.end();
-            }
-            else
-            {
-                res.writeHead(200, {'Content-Type': 'text/html'});
-                res.end(data.toString().replace(/\{hostname\}/g, req.headers.host).replace(/\{namespace\}/g, path.replace(/^\/|\/.*/g, '')));
-            }
-        });
-    }
-    else
-    {
-        return false;
-    }
+        res.writeHead(200, {'Content-Type': 'text/html'});
+        res.end(data.toString()
+           .replace(/\{hostname\}/g, req.headers.host.split(':')[0])
+           .replace(/\{namespace\}/g, path.replace(/^\/|\/.*/g, '')));
+    });
 });
 
-sockjs.installHandlers(httpd, {prefix: '[/]audience\/[^/]+'});
+sockjs.installHandlers(http.Server().listen(80), {prefix: '.*'});
 sockjs.on('connection', function(client)
 {
     try
     {
-        var namespaceName = client.pathname.replace(/^\/audience\/|\/.*/g, '');
+        var namespaceName = client.pathname.replace(/^\/|\/.*/g, '');
         if (namespaceName && namespaceName != 'lobby')
         {
             audience.join(client, namespaceName);
@@ -120,6 +91,7 @@ sockjs.on('connection', function(client)
 });
 
 // Port 1442 used to gather stats on all live namespaces (format: <namespace>:<created>:<members>:<connections>\n)
+var admin = net.Server();
 admin.listen(1442, 'localhost');
 admin.on('connection', function(sock)
 {

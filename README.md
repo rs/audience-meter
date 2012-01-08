@@ -27,7 +27,7 @@ In the webpage of the event, add the following javascript to join an event.:
     <script>
     function connect(namespace)
     {
-        var sock = new SockJS('http://YOUR-SERVER.COM/audience/' + namespace);
+        var sock = new SockJS('http://YOUR-SERVER.COM/' + namespace);
         // Auto-reconnect
         sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
     }
@@ -42,7 +42,7 @@ You may want to report the current number of online users on the event. By defau
     <script>
     function connect(namespace)
     {
-        var sock = new SockJS('http://YOUR-SERVER.COM/audience/' + namespace);
+        var sock = new SockJS('http://YOUR-SERVER.COM/' + namespace);
         // Auto-reconnect
         sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
 
@@ -64,8 +64,8 @@ You can listen for several different events at the same time, for intance to sho
     <script>
     function connect()
     {
-        // Connecting to /audience/lobby won't join a namespace
-        var sock = new SockJS('http://YOUR-SERVER.COM/audience/lobby');
+        // Connecting to /lobby won't join a namespace
+        var sock = new SockJS('http://YOUR-SERVER.COM/lobby');
         // Auto-reconnect
         sock.onclose = function() {setTimeout(function() {connect()}, 2000);}
 
