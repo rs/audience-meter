@@ -90,8 +90,8 @@ You can listen for several different events at the same time, for intance to sho
     <script>
     function connect()
     {
-        // Connecting to /lobby won't join a namespace
-        var sock = new SockJS('http://YOUR-SERVER.COM/lobby');
+        // Connecting to / won't join a namespace
+        var sock = new SockJS('http://YOUR-SERVER.COM/');
         // Auto-reconnect
         sock.onclose = function() {setTimeout(function() {connect()}, 2000);}
 
