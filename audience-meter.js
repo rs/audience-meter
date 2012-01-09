@@ -5,6 +5,11 @@ options
     .version('0.3.0')
     .option('-d, --debug', 'Log everything')
     .option('-w, --workers <num>', 'Number of worker processes to spawn (default to the number of CPUs)', parseInt)
+    .option('-m, --cluster-addr <ip:port>', 'Use a given multicast IP:PORT to sync several instances of audience-meter ' +
+                                            '(disabled by default, prefered address is 239.255.13.37:314)')
+    .option('--cluster-notify-interval <seconds>', 'Interval between notifications for a node\'s notification (default 2 seconds', parseInt, 2)
+    .option('--cluster-node-timeout <seconds>', 'Delay after which node\'s namespace info will be forgotten if no notification' +
+                                                'is recieved by a node (default 5 seconds)', parseInt, 5)
     .option('--sockjs-url', 'URL to the sockjs client library (default is sockjs CDN hosted lib)')
     .option('--notify-delta-ratio <ratio>', 'Minimum delta of number of members to reach before to notify ' +
                                             'listeners based on a fraction of the current number of members (default 0.1)', parseFloat, 0.1)
@@ -59,6 +64,17 @@ if (cluster.isMaster)
         require('./lib/stats').StatsServer({port: options.statsPort, audience: audience});
     }
 
+    if (options.clusterAddr)
+    {
+        require('./lib/cluster').ClusterManager
+        ({
+            notify_interval: options.clusterNotifyInterval,
+            node_timeout: options.clusterNodeTimeout,
+            multicast_addr: options.clusterAddr,
+            audience: audience,
+            log: logger
+        });
+    }
 }
 else
 {
