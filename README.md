@@ -49,72 +49,27 @@ Here are available parameters:
 
 In the webpage of the event, add the following javascript to join an event.:
 
-    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.1.min.js"></script>
+    <script src="/client/jquery.audience.js"></script>
     <script>
-    function connect(namespace)
-    {
-        var sock = new SockJS('http://YOUR-SERVER.COM/' + namespace);
-        // Auto-reconnect
-        sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
-    }
-    connect("{event_name}");
+    $.audience('http://YOUR-SERVER.COM/' + namespace)
     </script>
 
 Note that you can only join a single event at a time in a single page.
 
 You may want to report the current number of online users on the event. By default, joining an event listen for it. To get event members count when it changes, listen for incoming messages like this:
 
-    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.1.min.js"></script>
+    <script src="/client/jquery.audience.js"></script>
     <script>
-    function connect(namespace)
+    $.audience('http://{hostname}/{namespace}').progress(function(total)
     {
-        var sock = new SockJS('http://YOUR-SERVER.COM/' + namespace);
-        // Auto-reconnect
-        sock.onclose = function() {setTimeout(function() {connect(namespace)}, 2000);}
-
-        sock.onmessage = function(e)
-        {
-            var info = JSON.parse(e.data);
-            document.getElementById("total").innerHTML = info.total;
-        };
-    }
-    connect("{event_name}");
+        document.getElementById("total").innerHTML = total;
+    });
     </script>
     
     Connected users <span id="total">-</span>
 
-
-You can listen for several different events at the same time, for intance to show the number of online users on an event list. All counters will be updated in real time:
-
-    <script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
-    <script>
-    function connect()
-    {
-        // Connecting to / won't join a namespace
-        var sock = new SockJS('http://YOUR-SERVER.COM/');
-        // Auto-reconnect
-        sock.onclose = function() {setTimeout(function() {connect()}, 2000);}
-
-        sock.onopen = function(e)
-        {
-            // Sets the list of events to subscribe to
-            sock.write(JSON.stringify(["event1", "event2", "event3"]));
-        };
-
-        sock.onmessage = function(e)
-        {
-            var info = JSON.parse(e.data);
-            document.getElementById(info.name + "_total").innerHTML = info.total;
-        };
-    }
-    connect();
-    </script>
-
-    <ul>
-      <li>Event 1: <span id="event1_total">-</span> users
-      <li>Event 2: <span id="event2_total">-</span> users
-      <li>Event 3: <span id="event3_total">-</span> users
-    </ul>
 
 ## Monitoring Interface
 

@@ -1,44 +1,21 @@
 <html>
 <body>
 Connected users to {namespace}: <span id="total">-</span>
-<script src="http://cdn.sockjs.org/sockjs-0.1.min.js"></script>
+<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.1.min.js"></script>
+<script src="/client/jquery.audience.js"></script>
 <script>
-function connect(namespace)
+$.audience('http://{hostname}/{namespace}').progress(function(total)
 {
-    var sock = new SockJS('http://{hostname}/' + namespace);
-    sock.onmessage = function(e)
-    {
-        document.getElementById("total").innerHTML = JSON.parse(e.data).total;
-    };
-    sock.onclose = function(e)
-    {
-        if (!e.wasClean)
-        {
-            setTimeout(function() {connect(namespace)}, 2000);
-        }
-    }
-}
-connect("{namespace}");
+    document.getElementById("total").innerHTML = total;
+});
 </script>
 <pre>
 &lt;script src="http://cdn.sockjs.org/sockjs-0.1.min.js">&lt;/script>
 &lt;script>
-function connect(namespace)
+$.audience('http://{hostname}/{namespace}').progress(function(data)
 {
-    var sock = new SockJS('http://{hostname}/' + namespace);
-    sock.onmessage = function(e)
-    {
-        document.getElementById("total").innerHTML = JSON.parse(e.data).total;
-    };
-    sock.onclose = function(e)
-    {
-        if (!e.wasClean)
-        {
-            setTimeout(function() {connect(namespace)}, 2000);
-        }
-    }
-}
-connect("{namespace}");
+    document.getElementById("total").innerHTML = data.total;
+});
 &lt;/script>
 </pre>
 </body>
