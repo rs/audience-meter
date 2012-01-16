@@ -6,7 +6,7 @@ Audience Meter is a simple daemon written in [Node.js](http://nodejs.org) to mes
 ## Features
 
 - Namespaces to track an unlimited number of events
-- Cross browser websocket (thru [Sockjs](http://sockjs.org) to report online presence, and subscribe to live counters
+- Cross browser push notification thru [EventSource](http://dev.w3.org/html5/eventsource/) polyfill using xhr-streaming-CORS for recent browsers and flash/URLStream for older browser
 - Monitoring interface on a dedicated port
 - Spreads the load on multiple CPUs and/or multiple servers
 
@@ -31,12 +31,11 @@ Here are available parameters:
       --cluster-notify-interval <seconds>  Interval between notifications for a node's notification (default 2 seconds
       --cluster-node-timeout <seconds>     Delay after which node's namespace info will be forgotten if no notificationis
                                            recieved by a node (default 5 seconds)
-      --sockjs-url                         URL to the sockjs client library (default is sockjs CDN hosted lib)
       --notify-delta-ratio <ratio>         Minimum delta of number of members to reach before to notify listeners based
                                            on a fraction of the current number of members (default 0.1)
       --notify-min-delay <seconds>         Minimum delay between notifications (default 2)
       --notify-max-delay <seconds>         Maximum delay to wait before not sending notification because of min-delta not
-                                           reached (default 60)
+                                           reached (default 25)
       --namespace-clean-delay <seconds>    Minimum delay to wait before to clean an empty namespace (default 60)
       --demo-port <port>                   Public port on which to bind the demo server (default 8080, 0 to disable)
       --stats-port <port>                  Local port on which to bind the global stats server (default 1442, 0 to disable)
