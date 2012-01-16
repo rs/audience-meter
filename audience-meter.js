@@ -15,7 +15,7 @@ options
                                             'listeners based on a fraction of the current number of members (default 0.1)', parseFloat, 0.1)
     .option('--notify-min-delay <seconds>', 'Minimum delay between notifications (default 2)', parseFloat, 2)
     .option('--notify-max-delay <seconds>', 'Maximum delay to wait before not sending notification ' +
-                                            'because of min-delta not reached (default 60)', parseFloat, 60)
+                                            'because of min-delta not reached (default 25)', parseFloat, 25)
     .option('--namespace-clean-delay <seconds>', 'Minimum delay to wait before to clean an empty namespace (default 60)', parseFloat, 60)
     .option('--demo-port <port>', 'Public port on which to bind the demo server (default 8080, 0 to disable)', parseInt, 8080)
     .option('--stats-port <port>', 'Local port on which to bind the global stats server (default 1442, 0 to disable)', parseInt, 1442)
