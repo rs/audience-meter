@@ -3,11 +3,6 @@ Audience Meter: Lightweight daemon to mesure audience of a live event
 
 Audience Meter is a simple daemon written in [Node.js](http://nodejs.org) to mesure the number of users currently online. This can be used to mesure the audience of live events.
 
-## Requirements
-
-- [Node.js](http://nodejs.org)
-- [Sockjs](http://sockjs.org)
-
 ## Features
 
 - Namespaces to track an unlimited number of events
