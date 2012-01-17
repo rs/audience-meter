@@ -8,6 +8,7 @@
             xhr = global.XDomainRequest ? new global.XDomainRequest() : new global.XMLHttpRequest();
         xhr.open('POST', url, true);
         xhr.withCredentials = false;
+        xhr.setRequestHeader('Accept', 'text/event-stream');
         $(xhr).bind('error abort load', function()
         {
             setTimeout(function() {openConnection(url, deferred);}, 2000);

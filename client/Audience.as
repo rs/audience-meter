@@ -27,6 +27,7 @@ package
 
             this.request = new URLRequest(url);
             this.request.method = URLRequestMethod.POST;
+            this.request.requestHeaders = new Array(new URLRequestHeader('Accept','text/event-stream'));
             this.request.data = 0;
 
             this.stream = new URLStream();

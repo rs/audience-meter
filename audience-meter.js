@@ -1,8 +1,10 @@
+#!/usr/bin/env node
+
 var options = require('commander'),
     cluster = require('cluster');
 
 options
-    .version('0.3.0')
+    .version('2.0.1')
     .option('-d, --debug', 'Log everything')
     .option('-w, --workers <num>', 'Number of worker processes to spawn (default to the number of CPUs)', parseInt)
     .option('-m, --cluster-addr <ip:port>', 'Use a given multicast IP:PORT to sync several instances of audience-meter ' +
