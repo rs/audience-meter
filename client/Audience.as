@@ -18,6 +18,7 @@ package
         private var stream:URLStream;
         private var callback:String;
         private var request:URLRequest;
+        private var retryDelay:Number;
 
         public function Audience():void
         {
@@ -46,7 +47,10 @@ package
 
         private function reconnect(e:Event):void
         {
-            setTimeout(this.connect, 2000);
+            if (retryDelay >= 0)
+            {
+                setTimeout(this.connect, retryDelay);
+            }
         }
 
         public function dataReceived(e:ProgressEvent):void
@@ -58,11 +62,16 @@ package
             var lines:Array = buffer.split('\n');
             for (var i:int = 0, l:int = lines.length; i < l; i++)
             {
-                var line:String = lines[i];
-                line = line.replace(/^data:\s+|[\s\n]+$/g, '');
-                if (line)
+                var info:Array = lines[i].split(/:/, 2),
+                    value:Number = parseInt(info[1], 10);
+                switch (info[0])
                 {
-                    ExternalInterface.call(this.callback, line);
+                    case 'data':
+                        ExternalInterface.call(this.callback, value);
+                        break;
+                    case 'retry':
+                        this.retryDelay = value;
+                        break;
                 }
             }
         }

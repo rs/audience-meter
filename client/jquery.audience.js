@@ -5,13 +5,17 @@
     function openXHRConnection(url, deferred)
     {
         var offset = 0,
+            retryDelay = 2000,
             xhr = global.XDomainRequest ? new global.XDomainRequest() : new global.XMLHttpRequest();
         xhr.open('POST', url, true);
         xhr.withCredentials = false;
         xhr.setRequestHeader('Accept', 'text/event-stream');
         $(xhr).bind('error abort load', function()
         {
-            setTimeout(function() {openConnection(url, deferred);}, 2000);
+            if (retryDelay >= 0)
+            {
+                setTimeout(function() {openConnection(url, deferred);}, retryDelay);
+            }
         });
         $(xhr).bind('progress', function()
         {
@@ -25,8 +29,17 @@
                 var lines = data.split('\n');
                 for (var i = 0, l = lines.length; i < l; i++)
                 {
-                    var line = lines[i].replace(/^data:\s+|[\s\n]+$/g, '');
-                    deferred.notify(line);
+                    var info = lines[i].split(/:/, 2),
+                        value = parseInt(info[1], 10);
+                    switch (info[0])
+                    {
+                        case 'data':
+                            deferred.notify(value);
+                            break;
+                        case 'retry':
+                            retryDelay = value;
+                            break;
+                    }
                 }
             }
         });
