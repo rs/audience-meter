@@ -19,6 +19,7 @@ options
     .option('--notify-min-delay <seconds>', 'Minimum delay between notifications (default 2)', parseFloat, 2)
     .option('--notify-max-delay <seconds>', 'Maximum delay to wait before not sending notification ' +
                                             'because of min-delta not reached (default 25)', parseFloat, 25)
+    .option('--increment-delay <seconds>', 'Number of seconds to wait before to increment the counter in order to mitigate de/connection floods', parseFloat, 0)
     .option('--namespace-clean-delay <seconds>', 'Minimum delay to wait before to clean an empty namespace (default 60)', parseFloat, 60)
     .option('--demo-port <port>', 'Public port on which to bind the demo server (default 8080, 0 to disable)', parseInt, 8080)
     .option('--stats-port <port>', 'Local port on which to bind the global stats server (default 1442, 0 to disable)', parseInt, 1442)
@@ -86,6 +87,7 @@ else
     require('./lib/worker').Worker
     ({
         uuid: options.enableUuid,
+        increment_delay: options.incrementDelay,
         log: logger
     });
 }
