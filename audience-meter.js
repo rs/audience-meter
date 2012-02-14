@@ -9,6 +9,7 @@ options
     .option('-w, --workers <num>', 'Number of worker processes to spawn (default to the number of CPUs)', parseInt)
     .option('-m, --cluster-addr <ip:port>', 'Use a given multicast IP:PORT to sync several instances of audience-meter ' +
                                             '(disabled by default, prefered address is 239.255.13.37:314)')
+    .option('--enable-uuid', 'Enable connection UUID to prevent several connections with same (EXPERIMENTAL, known to leak memory)')
     .option('--cluster-notify-interval <seconds>', 'Interval between notifications for a node\'s notification (default 2 seconds', parseInt, 2)
     .option('--cluster-node-timeout <seconds>', 'Delay after which node\'s namespace info will be forgotten if no notification' +
                                                 'is recieved by a node (default 5 seconds)', parseInt, 5)
@@ -84,7 +85,7 @@ else
 
     require('./lib/worker').Worker
     ({
-        sockjs_client_url: options.sockjsUrl,
+        uuid: options.enableUuid,
         log: logger
     });
 }
