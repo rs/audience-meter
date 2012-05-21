@@ -34,13 +34,18 @@ setInterval(function()
                                       started, connected, ended, errors, misses, messages));
 }, 500);
 
-function spawnClient()
+function spawnClient(eventName)
 {
+    if (!eventName)
+    {
+        eventName = eventNames[Math.floor(Math.random() * options.concurrentEvents)];
+    }
+
     var client = http.get
     ({
         host: options.host,
         port: 80,
-        path: '/' + eventNames[Math.round(Math.random() * options.concurrentEvents)],
+        path: '/' + eventName,
         headers: {Accept: 'text/event-stream'},
         agent: false
     });
@@ -51,13 +56,6 @@ function spawnClient()
             misses++;
         }
     }, 60000);
-    client.on('end', function()
-    {
-        clearInterval(interval);
-        started--;
-        connected--;
-        closed++;
-    });
     client.on('error', function()
     {
         started--;
@@ -70,6 +68,15 @@ function spawnClient()
         {
             client.lastMessage = new Date().getTime();
             messages++;
+        });
+        res.on('end', function()
+        {
+            clearInterval(interval);
+            started--;
+            connected--;
+            ended++;
+            // reconnect
+            spawnClient(eventName);
         });
     });
 
