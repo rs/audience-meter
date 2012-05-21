@@ -19,27 +19,32 @@ Start by running the daemon on a server, root privilege is required to let the d
 Here are available parameters:
 
     Usage: audience-meter.js [options]
-    
+
     Options:
-    
+
       -h, --help                           output usage information
       -V, --version                        output the version number
       -d, --debug                          Log everything
       -w, --workers <num>                  Number of worker processes to spawn (default to the number of CPUs)
       -m, --cluster-addr <ip:port>         Use a given multicast IP:PORT to sync several instances of audience-meter
                                            (disabled by default, prefered address is 239.255.13.37:314)
+      --max-conn-duration <seconds>        The maximum number of seconds a connection can stay established
+                                           (default 3600, 0 to disable)
+      --enable-uuid                        Enable connection UUID to prevent several connections with same
+                                           (EXPERIMENTAL, known to leak memory)
       --cluster-notify-interval <seconds>  Interval between notifications for a node's notification (default 2 seconds
-      --cluster-node-timeout <seconds>     Delay after which node's namespace info will be forgotten if no notificationis
-                                           recieved by a node (default 5 seconds)
+      --cluster-node-timeout <seconds>     Delay after which node's namespace info will be forgotten if no notification
+                                           is recieved by a node (default 5 seconds)
       --notify-delta-ratio <ratio>         Minimum delta of number of members to reach before to notify listeners based
                                            on a fraction of the current number of members (default 0.1)
       --notify-min-delay <seconds>         Minimum delay between notifications (default 2)
       --notify-max-delay <seconds>         Maximum delay to wait before not sending notification because of min-delta not
                                            reached (default 25)
+      --increment-delay <seconds>          Number of seconds to wait before to increment the counter in order to mitigate
+                                           de/connection floods
       --namespace-clean-delay <seconds>    Minimum delay to wait before to clean an empty namespace (default 60)
       --demo-port <port>                   Public port on which to bind the demo server (default 8080, 0 to disable)
       --stats-port <port>                  Local port on which to bind the global stats server (default 1442, 0 to disable)
-
 
 In the webpage of the event, add the following javascript to join an event.:
 
@@ -61,7 +66,7 @@ You may want to report the current number of online users on the event. By defau
         document.getElementById("total").innerHTML = total;
     });
     </script>
-    
+
     Connected users <span id="total">-</span>
 
 

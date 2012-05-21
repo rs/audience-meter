@@ -9,9 +9,10 @@ options
     .option('-w, --workers <num>', 'Number of worker processes to spawn (default to the number of CPUs)', parseInt)
     .option('-m, --cluster-addr <ip:port>', 'Use a given multicast IP:PORT to sync several instances of audience-meter ' +
                                             '(disabled by default, prefered address is 239.255.13.37:314)')
+    .option('--max-conn-duration <seconds>', 'The maximum number of seconds a connection can stay established (default 3600, 0 to disable)', parseInt, 3600)
     .option('--enable-uuid', 'Enable connection UUID to prevent several connections with same (EXPERIMENTAL, known to leak memory)')
     .option('--cluster-notify-interval <seconds>', 'Interval between notifications for a node\'s notification (default 2 seconds', parseInt, 2)
-    .option('--cluster-node-timeout <seconds>', 'Delay after which node\'s namespace info will be forgotten if no notification' +
+    .option('--cluster-node-timeout <seconds>', 'Delay after which node\'s namespace info will be forgotten if no notification ' +
                                                 'is recieved by a node (default 5 seconds)', parseInt, 5)
     .option('--sockjs-url <url>', 'URL to the sockjs client library (default is sockjs CDN hosted lib)')
     .option('--notify-delta-ratio <ratio>', 'Minimum delta of number of members to reach before to notify ' +
@@ -88,6 +89,7 @@ else
     ({
         uuid: options.enableUuid,
         increment_delay: options.incrementDelay,
+        max_conn_duration: options.maxConnDuration,
         log: logger
     });
 }
