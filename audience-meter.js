@@ -14,7 +14,6 @@ options
     .option('--cluster-notify-interval <seconds>', 'Interval between notifications for a node\'s notification (default 2 seconds', parseInt, 2)
     .option('--cluster-node-timeout <seconds>', 'Delay after which node\'s namespace info will be forgotten if no notification ' +
                                                 'is recieved by a node (default 5 seconds)', parseInt, 5)
-    .option('--sockjs-url <url>', 'URL to the sockjs client library (default is sockjs CDN hosted lib)')
     .option('--notify-delta-ratio <ratio>', 'Minimum delta of number of members to reach before to notify ' +
                                             'listeners based on a fraction of the current number of members (default 0.1)', parseFloat, 0.1)
     .option('--notify-min-delay <seconds>', 'Minimum delay between notifications (default 2)', parseFloat, 2)
