@@ -1,6 +1,7 @@
 {
   "name": "audience-meter",
-  "version": "2.0.1",
+  "version": "2.0.2",
+  "engine": "node >= 0.8.19",
   "dependencies":
   {
     "commander": "0.5.1",
