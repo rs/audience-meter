@@ -88,7 +88,7 @@ if (cluster.isMaster)
 }
 else
 {
-    process.title = 'audience-meter: worker ' + process.env.NODE_WORKER_ID;
+    process.title = 'audience-meter: worker ';
 
     require('./lib/worker').Worker
     ({
