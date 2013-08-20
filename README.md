@@ -45,6 +45,7 @@ Here are available parameters:
       --namespace-clean-delay <seconds>    Minimum delay to wait before to clean an empty namespace (default 60)
       --demo-port <port>                   Public port on which to bind the demo server (default 8080, 0 to disable)
       --stats-port <port>                  Local port on which to bind the global stats server (default 1442, 0 to disable)
+      --notification-port <port>           Local port on which to bind the global notification server (default 2442, 0 to disable)
 
 In the webpage of the event, add the following javascript to join an event.:
 
