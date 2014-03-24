@@ -56,7 +56,8 @@ if (cluster.isMaster)
     require('./lib/master').Master
     ({
         workers: options.workers,
-        audience: audience
+        audience: audience,
+        log: logger
     });
 
     if (options.notificationPort)
